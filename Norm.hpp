@@ -347,6 +347,12 @@ public:
          << "R1 (c:" << gd_prob_c << ",d:" << gd_prob_d << ") : "
          << "R2 (c:" << gr_prob_c << ",d:" << gr_prob_d << ")\n";
     }
+    auto serialized = Serialize();
+    ss << "Serialized:" << std::setprecision(2) << std::fixed;
+    for (const auto& val : serialized) {
+      ss << " " << val;
+    }
+    ss << std::endl;
     return ss.str();
   }
   std::string InspectComparison(const Norm& other) const {
@@ -718,8 +724,8 @@ public:
   static Norm ParseNormString(const std::string& str, bool swap_gb = false) {
     std::regex re_d(R"(\d+)"); // regex for digits
     std::regex re_x(R"(^0x[0-9a-fA-F]+$)");  // regex for digits in hexadecimal
-    // regular expression for 20 floating point numbers separated by space
-    std::regex re_a(R"(^(0|1)(\.\d+)?( (0|1)(\.\d+)?){19}$)");
+    // regular expression for 20 (possibly floating point) numbers separated by space
+    std::regex re_a(R"(^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(?:\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+))){19}$)");
     Norm norm = Norm::AllC();
     if (std::regex_match(str, re_d)) {
       int id = std::stoi(str);
