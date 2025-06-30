@@ -12,7 +12,7 @@
 
 
 void PrintInitialTimeSeries(PrivateRepGame& prg, const nlohmann::json& params, std::ostream& out = std::cout) {
-  size_t num_prints = 100;
+  size_t num_prints = 50;
   size_t interval = params.at("t_init").get<size_t>() / num_prints;
 
   size_t N_strategies = prg.Population().size();  // number of different strategies
@@ -121,6 +121,45 @@ int main(int argc, char *argv[]) {
           }
           std::cout << "\n";
         }
+      }
+      if (pop.size() == 2 && pop[0].second > 1 && pop[1].second == 1)
+      {
+        // calculate critical b/c for invasion analysis
+        // (b-c)p_rr >= b p_rm - c p_mr
+        // b(p_rr - p_rm) >= c(p_rr - p_mr)
+        double p_rr = c_levels[0][0];
+        double p_rm = c_levels[0][1];
+        double p_mr = c_levels[1][0];
+        if (p_rr > p_rm) {
+          double b_c_min = (p_rr - p_mr) / (p_rr - p_rm);
+          if (b_c_min > 1.0) {
+            std::cout << "Critical b/c for invasion: b/c > " << b_c_min << std::endl;
+          }
+          else {
+            std::cout << "Always stable" << std::endl;
+          }
+        }
+        else if (p_rr < p_rm) {
+          double b_c_max = (p_rr - p_mr) / (p_rr - p_rm);
+          std::cout << "b_c_max: " << b_c_max << std::endl;
+          if (b_c_max > 1.0) {
+            std::cout << "Critical b/c for invasion: b/c < " << b_c_max << std::endl;
+          }
+          else {
+            std::cout << "Never stable" << std::endl;
+          }
+        }
+        else
+        {
+          if (p_rr > p_mr) {
+            std::cout << "Always stable" << std::endl;
+          }
+          else {
+            std::cout << "Never stable" << std::endl;
+          }
+        }
+        std::cout << "NormComparison:\n";
+        std::cout << prg.Population()[0].first.InspectComparison(prg.Population()[1].first);
       }
       if (count_good) {
         std::cout << "NormAverageReputation:\n";
