@@ -305,11 +305,15 @@ public:
       : Rd(R_d.good_probs), Rr(R_r.good_probs), P(act.coop_probs) {};
   Norm(const Norm &rhs) : Rd(rhs.Rd), Rr(rhs.Rr), P(rhs.P) {};
   static Norm FromSerialized(const std::array<double,20>& serialized) {
-    std::array<double,8> Rd_serialized, Rr_serialized;
-    std::copy(serialized.begin(), serialized.begin()+8, Rd_serialized.begin());
-    std::copy(serialized.begin()+8, serialized.begin()+16, Rr_serialized.begin());
     std::array<double,4> P_serialized;
-    std::copy(serialized.begin()+16, serialized.begin()+20, P_serialized.begin());
+    std::copy(serialized.begin(), serialized.begin()+4, P_serialized.begin());
+    std::array<double,8> Rd_serialized, Rr_serialized;
+    std::copy(serialized.begin()+4, serialized.begin()+12, Rd_serialized.begin());
+    std::copy(serialized.begin()+12, serialized.begin()+20, Rr_serialized.begin());
+    // reverse P_serialized
+    std::reverse(P_serialized.begin(), P_serialized.end());
+    std::reverse(Rd_serialized.begin(), Rd_serialized.end());
+    std::reverse(Rr_serialized.begin(), Rr_serialized.end());
     return Norm{AssessmentRule{Rd_serialized}, AssessmentRule{Rr_serialized}, ActionRule{P_serialized}};
   }
   AssessmentRule Rd, Rr;  // assessment rules to assess donor and recipient
@@ -405,12 +409,14 @@ public:
   }
   std::array<double,20> Serialize() const {
     std::array<double,20> out;
-    for (size_t i = 0; i < 8; i++) {
-      out[i] = Rd.good_probs[i];
-      out[i+8] = Rr.good_probs[i];
-    }
+    // first 4 elements are P's coop_probs, next 8 are Rd's good_probs, last 8 are Rr's good_probs
+    // the order is reversed for human-readability
     for (size_t i = 0; i < 4; i++) {
-      out[i+16] = P.coop_probs[i];
+      out[3-i] = P.coop_probs[i];
+    }
+    for (size_t i = 0; i < 8; i++) {
+      out[11-i] = Rd.good_probs[i];
+      out[19-i] = Rr.good_probs[i];
     }
     return out;
   }

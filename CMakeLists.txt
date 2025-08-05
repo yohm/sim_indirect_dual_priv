@@ -22,9 +22,6 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 
-add_executable(main_well_mixed_evo main_well_mixed_evo.cpp Norm.hpp PrivRepGame.hpp EvolPrivRepGame.hpp)
-target_link_libraries(main_well_mixed_evo Eigen3::Eigen nlohmann_json::nlohmann_json)
-
 add_executable(test_Norm test_Norm.cpp Norm.hpp)
 target_link_libraries(test_Norm GTest::gtest_main)
 add_test(NAME test_Norm COMMAND test_Norm)
