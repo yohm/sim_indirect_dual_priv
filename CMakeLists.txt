@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.7)
-project(sim_evo_social_norms)
+project(sim_indirect_dual_priv)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
@@ -8,7 +8,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 
 find_package(OpenMP REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(MPI REQUIRED)
 find_package(nlohmann_json REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/icecream-cpp)
 
