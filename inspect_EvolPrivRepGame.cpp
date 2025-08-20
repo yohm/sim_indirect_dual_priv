@@ -41,31 +41,34 @@ void PrintCompetition(const Norm& n1, const Norm& n2, const EvolPrivRepGame::Par
 
   int omp_threads = omp_get_max_threads();
   std::cerr << "Running with " << omp_threads << " threads" << std::endl;
-  std::cerr << "Parameteres:" << nlohmann::json(params).dump(2)  << std::endl;
-  std::cerr << "benefit: " << benefit << std::endl;
-  std::cerr << "beta: " << beta << std::endl;
+  auto json_params = nlohmann::json(params);
+  json_params["benefit"] = benefit;
+  json_params["beta"] = beta;
+  std::cerr << "Parameters:" << json_params.dump(2)  << std::endl;
 
   auto rhoij_rhoji_pii_pij = EvolPrivRepGame::FixationProbabilityAndPayoff(n1, n2, params, benefit, beta);
-  // auto rhos = EvolPrivRepGame::FixationProbabilities({n1, n2}, params, benefit, beta);
 
   std::vector<std::vector<double>> rhos = { {0.0, std::get<0>(rhoij_rhoji_pii_pij)}, {std::get<1>(rhoij_rhoji_pii_pij), 0.0} };
 
+  nlohmann::json out_j = {
+    {"transition_prob:n1->n2", rhos[0][1]},
+    {"transition_prob:n1<-n2", rhos[1][0]}
+  };
   auto eq = EvolPrivRepGame::EquilibriumPopulationLowMut(rhos);
-  std::cerr << "Transition probabilities between " << n1.GetName() << " vs " << n2.GetName() << std::endl;
-  std::cerr << "  ---> : " << rhos[0][1] << std::endl;
-  std::cerr << "  <--- : " << rhos[1][0] << std::endl;
-  std::cerr << "Equilibrium population: " << eq[0] << " , " << eq[1] << std::endl;
+  out_j["equilibrium_population"] = eq;
 
   double pc_s1 = EvolPrivRepGame::MonomorphicCooperationLevel(n1, params);
   double pc_s2 = EvolPrivRepGame::MonomorphicCooperationLevel(n2, params);
-  std::cerr << "Monomorphic cooperation levels: " << pc_s1 << " , " << pc_s2 << std::endl;
+  out_j["monomorphic_coop_levels"] = {pc_s1, pc_s2};
+  std::cout << out_j.dump(2) << std::endl;
 
+  std::ofstream fout("payoffs.dat");
   auto pi_i = std::get<2>(rhoij_rhoji_pii_pij);
   auto pi_j = std::get<3>(rhoij_rhoji_pii_pij);
-  std::cerr << "# num mutants l, pi_i[l], pi_j[l]" << std::endl;
   for (size_t l = 1; l < params.N; l++) {
-    std::cout << l << " " << pi_i[l] << " " << pi_j[l] << std::endl;
+    fout << l << " " << pi_i[l] << " " << pi_j[l] << std::endl;
   }
+  fout.close();
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
