@@ -6,6 +6,7 @@
 #include <queue>
 #include <utility>
 #include <string>
+#include <cmath>
 #include <icecream.hpp>
 #include <nlohmann/json.hpp>
 #include "PrivRepGame.hpp"
@@ -105,23 +106,30 @@ int main(int argc, char *argv[]) {
     }
 
     PrivateRepGame prg(pop, params["seed"].get<uint64_t>());
-    PrintInitialTimeSeries(prg, params, std::cout);
+    PrintInitialTimeSeries(prg, params, std::cerr);
 
     if (params.at("t_measure").get<size_t>() > 0) {
       prg.ResetCounts();
       prg.Update(params.at("t_measure").get<size_t>(), params.at("q"), params.at("mu_impl"), params.at("mu_percept").get<double>(),
                  params.at("mu_assess1").get<double>(), params.at("mu_assess2").get<double>(), count_good);
-      std::cout << "SystemWideCooperationLevel: " << prg.SystemWideCooperationLevel() << std::endl;
+
+      nlohmann::json out = nlohmann::json::object();
+      out["SystemWideCooperationLevel"] = prg.SystemWideCooperationLevel();
+
       auto c_levels = prg.NormCooperationLevels();
       if (c_levels.size() > 1) {
-        std::cout << "NormCooperationLevels:\n";
+        nlohmann::json norm_levels = nlohmann::json::array();
         for (size_t i = 0; i < c_levels.size(); i++) {
+          nlohmann::json row = nlohmann::json::array();
           for (size_t j = 0; j < c_levels[i].size(); j++) {
-            std::cout << ' ' << c_levels[i][j];
+            double v = c_levels[i][j];
+            if (std::isfinite(v)) row.push_back(v); else row.push_back(nullptr);
           }
-          std::cout << "\n";
+          norm_levels.push_back(row);
         }
+        out["NormCooperationLevels"] = norm_levels;
       }
+
       if (pop.size() == 2 && pop[0].second > 1 && pop[1].second == 1)
       {
         // calculate critical b/c for invasion analysis
@@ -130,47 +138,66 @@ int main(int argc, char *argv[]) {
         double p_rr = c_levels[0][0];
         double p_rm = c_levels[0][1];
         double p_mr = c_levels[1][0];
+        nlohmann::json invasion = nlohmann::json::object();
         if (p_rr > p_rm) {
           double b_c_min = (p_rr - p_mr) / (p_rr - p_rm);
           if (b_c_min > 1.0) {
-            std::cout << "Critical b/c for invasion: b/c > " << b_c_min << std::endl;
+            invasion["bc_min"] = b_c_min;
+            invasion["bc_max"] = nullptr;
           }
           else {
-            std::cout << "Always stable" << std::endl;
+            // always stable
+            invasion["bc_min"] = 1.0;
+            invasion["bc_max"] = nullptr;
           }
         }
         else if (p_rr < p_rm) {
           double b_c_max = (p_rr - p_mr) / (p_rr - p_rm);
-          std::cout << "b_c_max: " << b_c_max << std::endl;
+          invasion["b_c_max"] = b_c_max;
           if (b_c_max > 1.0) {
-            std::cout << "Critical b/c for invasion: b/c < " << b_c_max << std::endl;
+            invasion["bc_min"] = 1.0;
+            invasion["bc_max"] = b_c_max;
           }
           else {
-            std::cout << "Never stable" << std::endl;
+            // never stable
+            invasion["bc_min"] = 1.0;
+            invasion["bc_max"] = 1.0;
           }
         }
         else
         {
           if (p_rr > p_mr) {
-            std::cout << "Always stable" << std::endl;
+            // Always stable
+            invasion["bc_min"] = 1.0;
+            invasion["bc_max"] = nullptr;
           }
           else {
-            std::cout << "Never stable" << std::endl;
+            // never stable
+            invasion["bc_min"] = 1.0;
+            invasion["bc_max"] = 1.0;
           }
         }
-        std::cout << "NormComparison:\n";
-        std::cout << prg.Population()[0].first.InspectComparison(prg.Population()[1].first);
+        out["Invasion"] = invasion;
+
+        std::cerr << "NormComparison:\n";
+        std::cerr << prg.Population()[0].first.InspectComparison(prg.Population()[1].first);
       }
+
       if (count_good) {
-        std::cout << "NormAverageReputation:\n";
         auto r_levels = prg.NormAverageReputation();
+        nlohmann::json rep_levels = nlohmann::json::array();
         for (size_t i = 0; i < r_levels.size(); i++) {
+          nlohmann::json row = nlohmann::json::array();
           for (size_t j = 0; j < r_levels[i].size(); j++) {
-            std::cout << ' ' << r_levels[i][j];
+            double v = r_levels[i][j];
+            if (std::isfinite(v)) row.push_back(v); else row.push_back(nullptr);
           }
-          std::cout << "\n";
+          rep_levels.push_back(row);
         }
+        out["NormAverageReputation"] = rep_levels;
       }
+
+      std::cout << out.dump(2) << std::endl;
     }
 
     if (count_good) {
