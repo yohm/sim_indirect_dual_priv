@@ -133,6 +133,20 @@ def print_table(rows):
             r["Ln_AllC_AllD_eq_pop"],
         ]))
 
+def print_pair_eqpop_table(rows):
+    headers = ["Pair", "eq_pop"]
+    w0 = max(len(headers[0]), *(len(r["Pair"]) for r in rows)) if rows else len(headers[0])
+    w1 = max(len(headers[1]), *(len(r["eq_pop"]) for r in rows)) if rows else len(headers[1])
+
+    def line(l, r):
+        return f"{l.ljust(w0)}  {r.rjust(w1)}"
+
+    print()
+    print(line(headers[0], headers[1]))
+    print(line("-"*w0, "-"*w1))
+    for r in rows:
+        print(line(r["Pair"], r["eq_pop"]))
+
 def main():
     for exe in (PRG_EXE, EPRG_EXE):
         if not (Path(exe).exists() or shutil.which(exe)):
@@ -175,6 +189,20 @@ def main():
 
     print()
     print_table(rows)
+
+    pair_rows = []
+    for k in range(1, 9):
+        a = f"L{k}"
+        b = f"L{k}-IS"
+        pair_label = f"{a} vs. {b}"
+        if a in PARAMS and b in PARAMS:
+            out = run(EPRG_EXE, [PARAMS[a], PARAMS[b]])
+            eq_pop = pick_eq_pop_str(out) if out else "N/A"
+        else:
+            eq_pop = "N/A"
+        pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
+
+    print_pair_eqpop_table(pair_rows)
 
 if __name__ == "__main__":
     main()
