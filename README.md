@@ -19,8 +19,8 @@ brew install nlohmann-json
 Clone the repository with submodules.
 
 ```bash
-git clone --recursive git@github.com:yohm/sim_indiredct_dual_priv.git
-cd sim_indiredct_dual_priv
+git clone --recursive git@github.com:yohm/sim_indirect_dual_priv.git
+cd sim_indirect_dual_priv
 ```
 
 Make a build directory and run cmake.
