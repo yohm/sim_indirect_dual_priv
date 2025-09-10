@@ -1,14 +1,11 @@
 """
-Usage:
-  cd ~/sim_indirect_dual_priv
-  python3 -m venv .venv
-  source .venv/bin/activate
-  python -m pip install -U pip wheel setuptools
-  pip install numpy matplotlib
+Usage (from repo root):
+  uv venv .venv && source .venv/bin/activate
+  uv pip install -r script/requirements.txt
 
-  python ImageMatrix.py --norm L3 --N 50 --ep 0.05 --q 0.9 --nIt 20000 --seed 0
-  python ImageMatrix.py --norm L6_IS
-  python ImageMatrix.py --norm all
+  python script/ImageMatrix.py --norm L3 --N 50 --ep 0.05 --q 0.9 --nIt 20000 --seed 0
+  python script/ImageMatrix.py --norm L6_IS
+  python script/ImageMatrix.py --norm all
 """
 
 import argparse
@@ -154,7 +151,7 @@ if __name__ == "__main__":
                     help="Hex color for 'good' cells (overrides defaults)")
     args = ap.parse_args()
 
-    # Default palette (adjust to taste / to match a paper’s palette if desired)
+    # Default palette
     default_colors = {
         "L1": "#4f6db8", "L1_IS": "#4f6db8",
         "L2": "#b6483a", "L2_IS": "#b6483a",
@@ -184,3 +181,4 @@ if __name__ == "__main__":
             color = args.good_color or default_colors[nm]
             print(f"{nm}  MEnd shape={MEnd.shape}, good-ratio={MEnd.mean():.3f}")
             show_binary_matrix(MEnd, title=nm, good_color=color)
+

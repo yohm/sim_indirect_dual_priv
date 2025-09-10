@@ -1,14 +1,18 @@
 """
-Usage:
-  cd ~/sim_indirect_dual_priv
-  python3 compare_Norm.py 
+Usage (from repo root):
+  uv venv .venv && source .venv/bin/activate
+  uv pip install -r script/requirements.txt
+  cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release -j
+  python script/compare_Norm.py
 """
 
-import subprocess, re, json, sys, shutil
+import subprocess, json, sys, shutil
 from pathlib import Path
 
-PRG_EXE  = "./cmake-build-release/inspect_PrivRepGame"
-EPRG_EXE = "./cmake-build-release/inspect_EvolPrivRepGame"
+# Resolve repo root and executables regardless of CWD
+ROOT = Path(__file__).resolve().parents[1]
+PRG_EXE  = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
+EPRG_EXE = str(ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame")
 
 PARAMS = {
     "L1":     "1.00 0.00 1.00 1.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
@@ -212,3 +216,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
