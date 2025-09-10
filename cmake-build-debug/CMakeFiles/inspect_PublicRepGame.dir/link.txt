@@ -1,1 +1,0 @@
-/usr/bin/c++  -Wno-deprecated-declarations -O3 -DNDEBUG CMakeFiles/inspect_PublicRepGame.dir/inspect_PublicRepGame.cpp.o -o inspect_PublicRepGame 

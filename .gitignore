@@ -1,1 +1,3 @@
 oacis_*
+cmake-build-*
+.venv

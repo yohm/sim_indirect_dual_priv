@@ -1,1 +1,0 @@
-/usr/bin/c++  -Wno-deprecated-declarations -O3 -DNDEBUG CMakeFiles/test_PublicRepGame.dir/test_PublicRepGame.cpp.o -o test_PublicRepGame  lib/libgtest_main.a lib/libgtest.a 
