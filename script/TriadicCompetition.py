@@ -13,6 +13,7 @@ Usage (from repo root):
 
 import subprocess, sys, json, os
 from pathlib import Path
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, FancyArrowPatch
 
@@ -21,28 +22,9 @@ ROOT = Path(__file__).resolve().parents[1]
 os.chdir(ROOT)
 EPRG_EXE = str(ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame")
 
-# --- robust JSON block iterator (handles nested {}) ---
-def iter_json_blocks(text: str):
-    start = None; depth = 0; in_str = False; esc = False
-    for i, ch in enumerate(text):
-        if ch == '"' and not esc:
-            in_str = not in_str
-        esc = (ch == '\\' and not esc) if in_str else False
-        if in_str:
-            continue
-        if ch == '{':
-            if depth == 0: start = i
-            depth += 1
-        elif ch == '}':
-            if depth > 0:
-                depth -= 1
-                if depth == 0 and start is not None:
-                    chunk = text[start:i+1]
-                    try:
-                        yield json.loads(chunk)
-                    except json.JSONDecodeError:
-                        pass
-                    start = None
+def parse_json_stdout(text: str) -> dict:
+    """Parse stdout that is expected to be a single JSON object."""
+    return json.loads(text)
 
 def run_and_parse(norm_arg: str):
     try:
@@ -51,15 +33,12 @@ def run_and_parse(norm_arg: str):
         sys.exit(f"[ERROR] Executable not found: {EPRG_EXE}")
     except subprocess.CalledProcessError as e:
         sys.exit(f"[ERROR] Execution failed: {EPRG_EXE} {norm_arg}\n{e.stdout}\n{e.stderr}")
-    eq = rhos = None
-    for obj in iter_json_blocks(res.stdout):
-        if eq is None and isinstance(obj.get("eq"), list) and len(obj["eq"]) >= 3:
-            eq = obj["eq"][:3]
-        if rhos is None and isinstance(obj.get("rhos"), list) and len(obj["rhos"]) == 3:
-            rhos = obj["rhos"]
+    obj = parse_json_stdout(res.stdout)
+    eq = obj.get("eq")
+    rhos = obj.get("rhos")
     if eq is None or rhos is None:
         sys.exit("[ERROR] Could not find 'eq' and/or 'rhos' in program output.")
-    return eq, rhos
+    return eq[:3], rhos
 
 def fmt_pct1(x):  return f"{x*100:.1f}%"
 def fmt_rho(x):
@@ -152,4 +131,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
