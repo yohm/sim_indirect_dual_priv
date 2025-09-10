@@ -227,6 +227,44 @@ $ ./cmake-build-release/inspect_EvolPrivRepGame L3
 }
 ```
 
+## Python Scripts and Environment (uv)
+
+This repository includes Python helper scripts under `script/` for analysis and plotting. They depend only on NumPy and Matplotlib and interact with the built C++ executables.
+
+### Environment setup with uv
+
+- Install uv (package manager by Astral) if you don't have it:
+  - macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  - Windows (PowerShell): `irm https://astral.sh/uv/install.ps1 | iex`
+
+From the repository root:
+
+```bash
+uv venv .venv
+source .venv/bin/activate              # Windows: .venv\\Scripts\\Activate.ps1
+uv pip install -r script/requirements.txt
+```
+
+Build the C++ executables (Release) if you plan to use the inspection/triadic scripts:
+
+```bash
+cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake-build-release -j
+```
+
+### How to run the scripts
+
+- Image matrix simulation/plot (no C++ dependency):
+  - `python script/ImageMatrix.py --norm L3 --N 50 --ep 0.05 --q 0.9 --nIt 20000 --seed 0`
+  - `python script/ImageMatrix.py --norm all`
+
+- Norm comparisons (requires built executables):
+  - `python script/compare_Norm.py`
+
+- Triadic competition plot (requires built executables):
+  - `python script/TriadicCompetition.py L1`
+  - or pass a full parameter string: `python script/TriadicCompetition.py "1.00 0.00 ..."`
+
 ## Tests
 
 Unit tests are prepared. The executables that starts with `test_` are the unit tests. Run these tests using `ctest` command.

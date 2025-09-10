@@ -1,14 +1,18 @@
 """
-Usage:
-  cd ~/sim_indirect_dual_priv
-  python3 compare_Norm.py 
+Usage (from repo root):
+  uv venv .venv && source .venv/bin/activate
+  uv pip install -r script/requirements.txt
+  cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release -j
+  python script/compare_Norm.py
 """
 
-import subprocess, re, json, sys, shutil
+import subprocess, json, sys, shutil
 from pathlib import Path
 
-PRG_EXE  = "./cmake-build-release/inspect_PrivRepGame"
-EPRG_EXE = "./cmake-build-release/inspect_EvolPrivRepGame"
+# Resolve repo root and executables regardless of CWD
+ROOT = Path(__file__).resolve().parents[1]
+PRG_EXE  = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
+EPRG_EXE = str(ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame")
 
 PARAMS = {
     "L1":     "1.00 0.00 1.00 1.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
@@ -40,60 +44,35 @@ def run(exe: str, args: list[str]) -> str | None:
         print(f"[ERROR] Execution failed: {exe} {args}\n{e.stdout}\n{e.stderr}", file=sys.stderr)
         return None
 
-def iter_json_blocks(text: str):
-    start = None; depth = 0; in_str = False; esc = False
-    for i, ch in enumerate(text):
-        if ch == '"' and not esc:
-            in_str = not in_str
-        esc = (ch == '\\' and not esc) if in_str else False
-        if in_str: continue
-        if ch == '{':
-            if depth == 0: start = i
-            depth += 1
-        elif ch == '}':
-            if depth > 0:
-                depth -= 1
-                if depth == 0 and start is not None:
-                    chunk = text[start:i+1]
-                    try: yield json.loads(chunk)
-                    except json.JSONDecodeError: pass
-                    start = None
+def parse_obj(text: str) -> dict:
+    return json.loads(text)
 
-def pick_swcl(text: str):
-    for obj in iter_json_blocks(text):
-        if "SystemWideCooperationLevel" in obj:
-            v = obj["SystemWideCooperationLevel"]
-            return None if v is None else float(v)
-    return None
+def pick_swcl_obj(obj: dict):
+    v = obj.get("SystemWideCooperationLevel")
+    return None if v is None else float(v)
 
-def pick_invasion_bcs(text: str):
-    bc_max = bc_min = None
-    for obj in iter_json_blocks(text):
-        inv = obj.get("Invasion")
-        if isinstance(inv, dict):
-            if "bc_max" in inv and inv["bc_max"] is not None:
-                bc_max = float(inv["bc_max"])
-            elif "b_c_max" in inv and inv["b_c_max"] is not None:
-                bc_max = float(inv["b_c_max"])
-            if "bc_min" in inv and inv["bc_min"] is not None:
-                bc_min = float(inv["bc_min"])
-    return bc_max, bc_min
+def pick_invasion_bcs_obj(obj: dict):
+    inv = obj.get("Invasion") or {}
+    bc_max = inv.get("bc_max")
+    if bc_max is None:
+        bc_max = inv.get("b_c_max")
+    bc_min = inv.get("bc_min")
+    return (None if bc_max is None else float(bc_max),
+            None if bc_min is None else float(bc_min))
 
-def pick_eq_pop_str(text: str):
-    for obj in iter_json_blocks(text):
-        ep = obj.get("equilibrium_population")
-        if isinstance(ep, list) and len(ep) == 2:
-            a, b = ep
-            a = "N/A" if a is None else f"{float(a):.6g}"
-            b = "N/A" if b is None else f"{float(b):.6g}"
-            return f"{a},{b}"
+def pick_eq_pop_str_obj(obj: dict):
+    ep = obj.get("equilibrium_population")
+    if isinstance(ep, list) and len(ep) == 2:
+        a, b = ep
+        a = "N/A" if a is None else f"{float(a):.6g}"
+        b = "N/A" if b is None else f"{float(b):.6g}"
+        return f"{a},{b}"
     return "N/A"
 
-def pick_eq3(text: str):
-    for obj in iter_json_blocks(text):
-        eq = obj.get("eq")
-        if isinstance(eq, list) and len(eq) >= 3:
-            return tuple(float(eq[i]) if eq[i] is not None else None for i in range(3))
+def pick_eq3_obj(obj: dict):
+    eq = obj.get("eq")
+    if isinstance(eq, list) and len(eq) >= 3:
+        return tuple(float(eq[i]) if eq[i] is not None else None for i in range(3))
     return (None, None, None)
 
 def fmt(v): return "N/A" if v is None else f"{v:.6g}"
@@ -165,22 +144,22 @@ def main():
         print(f"[{i}/{len(labels)}] {label} ...")
 
         out1 = run(PRG_EXE,  [p, "50"])
-        swcl = pick_swcl(out1) if out1 else None
+        swcl = pick_swcl_obj(parse_obj(out1)) if out1 else None
 
         out2 = run(PRG_EXE,  [p, "49", "AllC", "1"])
-        bcmax_c, bcmin_c = pick_invasion_bcs(out2) if out2 else (None, None)
+        bcmax_c, bcmin_c = pick_invasion_bcs_obj(parse_obj(out2)) if out2 else (None, None)
 
         out3 = run(EPRG_EXE, [p, "AllC"])
-        eqpop_c = pick_eq_pop_str(out3) if out3 else "N/A"
+        eqpop_c = pick_eq_pop_str_obj(parse_obj(out3)) if out3 else "N/A"
 
         out4 = run(PRG_EXE,  [p, "49", "AllD", "1"])
-        bcmax_d, bcmin_d = pick_invasion_bcs(out4) if out4 else (None, None)
+        bcmax_d, bcmin_d = pick_invasion_bcs_obj(parse_obj(out4)) if out4 else (None, None)
 
         out5 = run(EPRG_EXE, [p, "AllD"])
-        eqpop_d = pick_eq_pop_str(out5) if out5 else "N/A"
+        eqpop_d = pick_eq_pop_str_obj(parse_obj(out5)) if out5 else "N/A"
 
         out6 = run(EPRG_EXE, [p])                    
-        eq1, eq2, eq3 = pick_eq3(out6) if out6 else (None, None, None)
+        eq1, eq2, eq3 = pick_eq3_obj(parse_obj(out6)) if out6 else (None, None, None)
         eq_combo = ",".join([fmt(eq1), fmt(eq2), fmt(eq3)])
 
         rows.append({
@@ -203,7 +182,7 @@ def main():
         pair_label = f"{a} vs. {b}"
         if a in PARAMS and b in PARAMS:
             out = run(EPRG_EXE, [PARAMS[a], PARAMS[b]])
-            eq_pop = pick_eq_pop_str(out) if out else "N/A"
+            eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
         else:
             eq_pop = "N/A"
         pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
