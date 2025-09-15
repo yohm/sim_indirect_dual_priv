@@ -2,3 +2,4 @@ oacis_*
 cmake-build-*
 .venv
 *.dat
+results_tables
