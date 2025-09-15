@@ -324,6 +324,16 @@ TEST(Norm, ParseNormString) {
   EXPECT_EQ( Norm::ParseNormString("AllG").GetName(), "AllG" );
   EXPECT_EQ( Norm::ParseNormString("L1").GetName(), "L1" );
   EXPECT_EQ( Norm::ParseNormString("S16").GetName(), "S16" );
+  // L*-IS variants (Rr = ImageScoring)
+  EXPECT_EQ( Norm::ParseNormString("L3-IS").GetName(), "L3-IS" );
+  {
+    Norm base = Norm::L3();
+    Norm is = Norm::ParseNormString("L3-IS");
+    EXPECT_TRUE(is.IsDeterministic());
+    EXPECT_EQ(is.Rr, AssessmentRule::ImageScoring());
+    EXPECT_EQ(is.Rd, base.Rd);
+    EXPECT_EQ(is.P, base.P);
+  }
 
   EXPECT_EQ( Norm::ParseNormString("GSCO-1.5").GetName(), "GSCO-1.5" );
   EXPECT_EQ( Norm::ParseNormString("857181").ID(), 857181 );

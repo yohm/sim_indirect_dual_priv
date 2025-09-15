@@ -75,7 +75,7 @@ Norm: 0x0d145d 857181 [128-132-2] : ImageScoring
 ...
 ```
 
-Named norms are AllC, AllD, AllG, AllB, ImageScoring, L1–L8, and SecondarySixteen (S1–S16).
+Named norms are AllC, AllD, AllG, AllB, ImageScoring, L1–L8, L1-IS–L8-IS (L* with Rr = ImageScoring), and SecondarySixteen (S1–S16).
 
 You can also specify a norm by 20 floating-point numbers separated by spaces:
 

@@ -567,6 +567,47 @@ public:
                 AssessmentRule::KeepRecipient(),
                 {{0, 1, 0, 1}});
   }
+  // L*-IS variants: same as L* but with Rr = ImageScoring
+  static Norm L1_IS() {
+    Norm n = L1();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L2_IS() {
+    Norm n = L2();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L3_IS() {
+    Norm n = L3();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L4_IS() {
+    Norm n = L4();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L5_IS() {
+    Norm n = L5();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L6_IS() {
+    Norm n = L6();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L7_IS() {
+    Norm n = L7();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L8_IS() {
+    Norm n = L8();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
   static Norm SecondarySixteen(int i) {
     if (i <= 0 || i > 16) { throw std::runtime_error("Norm: i must be between 1 and 16"); }
     double R_GB_C = static_cast<double>( ((i - 1) >> 3) & 0b1 );
@@ -788,6 +829,14 @@ const std::vector<std::pair<int,std::string> > Norm::NormNames = {{
                                                                     {L6().ID(), "L6"},
                                                                     {L7().ID(), "L7"},
                                                                     {L8().ID(), "L8"},
+                                                                    {L1_IS().ID(), "L1-IS"},
+                                                                    {L2_IS().ID(), "L2-IS"},
+                                                                    {L3_IS().ID(), "L3-IS"},
+                                                                    {L4_IS().ID(), "L4-IS"},
+                                                                    {L5_IS().ID(), "L5-IS"},
+                                                                    {L6_IS().ID(), "L6-IS"},
+                                                                    {L7_IS().ID(), "L7-IS"},
+                                                                    {L8_IS().ID(), "L8-IS"},
                                                                     {SecondarySixteen(1).ID(), "S1"},
                                                                     {SecondarySixteen(2).ID(), "S2"},
                                                                     {SecondarySixteen(3).ID(), "S3"},
