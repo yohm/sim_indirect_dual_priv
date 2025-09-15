@@ -343,7 +343,15 @@ TEST(Norm, ParseNormString) {
   std::string trip_inspect = trip.Inspect();
   EXPECT_NE(trip_inspect.find("128-132-2"), std::string::npos);
 
-  const std::string s = "0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 0.0 1.0 0.0 1.0";
+  // Serialized format: [P(gg), P(gb), P(bg), P(bb)] [Rd reversed 8] [Rr reversed 8]
+  // Choose values to satisfy assertions below:
+  //   P: CProb(G,G)=1, CProb(G,B)=0, CProb(B,G)=1, CProb(B,B)=0
+  //   Rd: GProbDonor(G,G,C)=0.8, GProbDonor(B,B,D)=0.1
+  //   Rr: GProbRecip(G,G,C)=0.1, GProbRecip(B,B,D)=0.8
+  const std::string s =
+      "1.0 0.0 1.0 0.0 "
+      "0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 "
+      "0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8";
   Norm n = Norm::ParseNormString(s);
   EXPECT_DOUBLE_EQ( n.CProb(G, G), 1.0 );
   EXPECT_DOUBLE_EQ( n.CProb(G, B), 0.0 );
