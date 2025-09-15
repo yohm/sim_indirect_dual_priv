@@ -124,6 +124,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Options:" << std::endl;
     std::cerr << "  -j param.json : set parameters used for evolutionary simulation by json file" << std::endl;
     std::cerr << "  norm_string : string representation of a norm" << std::endl;
+    std::cerr << "                [Norm name] | [ID] | [0xHEX_ID] | [Rd-Rr-P] | [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]" << std::endl;
     std::cerr << "Default parameters:" << std::endl;
     std::cerr << "  " << nlohmann::json(EvolPrivRepGame::Parameters{}).dump(2) << std::endl;
     return 1;

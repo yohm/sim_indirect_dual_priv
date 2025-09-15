@@ -330,7 +330,20 @@ TEST(Norm, ParseNormString) {
   EXPECT_EQ( Norm::ParseNormString("0xd145d").ID(), 857181 );
   EXPECT_EQ( Norm::ParseNormString("857181", true).ID(), 0xb8aeb );
 
-  const std::string s = "0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 0.0 1.0 0 1";
+  // New Rd-Rr-P triplet format for deterministic norms
+  // Example: Rd=128, Rr=132, P=2
+  Norm trip = Norm::ParseNormString("128-132-2");
+  int expected_id = (128 << 12) + (132 << 4) + 2;
+  EXPECT_TRUE(trip.IsDeterministic());
+  EXPECT_EQ(trip.ID(), expected_id);
+  EXPECT_EQ(trip.Rd.ID(), 128);
+  EXPECT_EQ(trip.Rr.ID(), 132);
+  EXPECT_EQ(trip.P.ID(), 2);
+  // Inspect string should include the triplet format
+  std::string trip_inspect = trip.Inspect();
+  EXPECT_NE(trip_inspect.find("128-132-2"), std::string::npos);
+
+  const std::string s = "0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 0.0 1.0 0.0 1.0";
   Norm n = Norm::ParseNormString(s);
   EXPECT_DOUBLE_EQ( n.CProb(G, G), 1.0 );
   EXPECT_DOUBLE_EQ( n.CProb(G, B), 0.0 );

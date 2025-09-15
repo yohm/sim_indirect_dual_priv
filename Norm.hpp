@@ -321,7 +321,10 @@ public:
   std::string Inspect() const {
     std::stringstream ss;
     if (IsDeterministic()) {
-      ss << "Norm: 0x" << std::setfill('0') << std::setw(5) << std::hex << ID() << " " << std::dec << ID() << " : " << GetName() << std::endl;
+      ss << "Norm: 0x" << std::setfill('0') << std::setw(5) << std::hex << ID()
+         << " " << std::dec << ID()
+         << " [" << Rd.ID() << "-" << Rr.ID() << "-" << P.ID() << "]"
+         << " : " << GetName() << std::endl;
       ss << std::resetiosflags(std::ios_base::fmtflags(-1));
       for (int i = 3; i >= 0; i--) {
         Reputation X = static_cast<Reputation>(i / 2);
@@ -729,6 +732,7 @@ public:
 
   static Norm ParseNormString(const std::string& str, bool swap_gb = false) {
     std::regex re_d(R"(\d+)"); // regex for digits
+    std::regex re_triplet(R"(^([0-9]+)-([0-9]+)-([0-9]+)$)"); // regex for Rd-Rr-P deterministic triplet
     std::regex re_x(R"(^0x[0-9a-fA-F]+$)");  // regex for digits in hexadecimal
     // regular expression for 20 (possibly floating point) numbers separated by space
     std::regex re_a(R"(^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(?:\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+))){19}$)");
@@ -736,6 +740,17 @@ public:
     if (std::regex_match(str, re_d)) {
       int id = std::stoi(str);
       norm = Norm::ConstructFromID(id);
+    }
+    else if (std::regex_match(str, re_triplet)) {
+      std::smatch m;
+      std::regex_match(str, m, re_triplet);
+      // m[1]=Rd, m[2]=Rr, m[3]=P
+      int rd = std::stoi(m[1]);
+      int rr = std::stoi(m[2]);
+      int p  = std::stoi(m[3]);
+      norm = Norm(AssessmentRule::MakeDeterministicRule(rd),
+                  AssessmentRule::MakeDeterministicRule(rr),
+                  ActionRule::MakeDeterministicRule(p));
     }
     else if (std::regex_match(str, re_x)) {
       int id = std::stoi(str, nullptr, 16);
