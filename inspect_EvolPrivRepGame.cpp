@@ -2,6 +2,7 @@
 #include <fstream>
 #include <chrono>
 #include <regex>
+#include <set>
 #include <icecream.hpp>
 #include <nlohmann/json.hpp>
 #include "EvolPrivRepGame.hpp"
@@ -96,6 +97,23 @@ int main(int argc, char *argv[]) {
     }
     else {
       args.emplace_back(argv[i]);
+    }
+  }
+
+  // Validate JSON keys against default Parameters fields, plus optional benefit/beta
+  {
+    std::set<std::string> allowed_keys;
+    auto defaults_j = nlohmann::json(EvolPrivRepGame::Parameters{});
+    for (auto it = defaults_j.begin(); it != defaults_j.end(); ++it) {
+      allowed_keys.insert(it.key());
+    }
+    allowed_keys.insert("benefit");
+    allowed_keys.insert("beta");
+    for (auto it = j.begin(); it != j.end(); ++it) {
+      if (allowed_keys.find(it.key()) == allowed_keys.end()) {
+        std::cerr << "[Error] unknown parameter: " << it.key() << std::endl;
+        return 1;
+      }
     }
   }
 
