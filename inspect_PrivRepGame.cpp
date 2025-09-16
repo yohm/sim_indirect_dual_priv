@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
         }
         else if (p_rr < p_rm) {
           double b_c_max = (p_rr - p_mr) / (p_rr - p_rm);
-          invasion["b_c_max"] = b_c_max;
+          invasion["bc_max"] = b_c_max;
           if (b_c_max > 1.0) {
             invasion["bc_min"] = 1.0;
             invasion["bc_max"] = b_c_max;
