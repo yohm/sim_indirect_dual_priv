@@ -544,6 +544,12 @@ public:
                 AssessmentRule::KeepRecipient(),
                 {{1, 1, 0, 1}});
   }
+  static Norm L2v() {
+    // Variant of L2 with (B,B) -> D in the action rule (DISC)
+    return Norm({{0, 1, 0, 1, 1, 0, 0, 1}},
+                AssessmentRule::KeepRecipient(),
+                ActionRule::DISC());
+  }
   static Norm L3() {
     return Norm({{1, 1, 0, 1, 1, 1, 0, 1}},
                 AssessmentRule::KeepRecipient(),
@@ -587,6 +593,11 @@ public:
   }
   static Norm L2_IS() {
     Norm n = L2();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L2v_IS() {
+    Norm n = L2v();
     n.Rr = AssessmentRule::ImageScoring();
     return n;
   }
@@ -836,6 +847,7 @@ const std::vector<std::pair<int,std::string> > Norm::NormNames = {{
                                                                     {L1().ID(), "L1"},
                                                                     {L1v().ID(), "L1v"},
                                                                     {L2().ID(), "L2"},
+                                                                    {L2v().ID(), "L2v"},
                                                                     {L3().ID(), "L3"},
                                                                     {L4().ID(), "L4"},
                                                                     {L5().ID(), "L5"},
@@ -845,6 +857,7 @@ const std::vector<std::pair<int,std::string> > Norm::NormNames = {{
                                                                     {L1_IS().ID(), "L1-IS"},
                                                                     {L1v_IS().ID(), "L1v-IS"},
                                                                     {L2_IS().ID(), "L2-IS"},
+                                                                    {L2v_IS().ID(), "L2v-IS"},
                                                                     {L3_IS().ID(), "L3-IS"},
                                                                     {L4_IS().ID(), "L4-IS"},
                                                                     {L5_IS().ID(), "L5-IS"},

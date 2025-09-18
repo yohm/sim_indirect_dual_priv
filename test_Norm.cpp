@@ -160,6 +160,26 @@ TEST(Norm, L1v) {
   EXPECT_EQ(Norm::ParseNormString("L1v").GetName(), "L1v");
 }
 
+TEST(Norm, L2v) {
+  Norm l2 = Norm::L2();
+  Norm l2v = Norm::L2v();
+  // Deterministic and keeps recipient
+  EXPECT_TRUE(l2v.IsDeterministic());
+  EXPECT_TRUE(l2v.IsRecipKeep());
+  // Same Rd as L2
+  EXPECT_EQ(l2v.Rd, l2.Rd);
+  // Action rule is DISC, differs from L2 only at (B,B)
+  EXPECT_EQ(l2v.P, ActionRule::DISC());
+  EXPECT_DOUBLE_EQ(l2.CProb(B, B), 1.0);
+  EXPECT_DOUBLE_EQ(l2v.CProb(B, B), 0.0);
+  // Other entries match L2 for BG, GB, GG except BB changed
+  EXPECT_DOUBLE_EQ(l2v.CProb(B, G), l2.CProb(B, G));
+  EXPECT_DOUBLE_EQ(l2v.CProb(G, B), l2.CProb(G, B));
+  EXPECT_DOUBLE_EQ(l2v.CProb(G, G), l2.CProb(G, G));
+  // Name mapping
+  EXPECT_EQ(Norm::ParseNormString("L2v").GetName(), "L2v");
+}
+
 TEST(Norm, AllG) {
   Norm allg = Norm::AllG();
   EXPECT_TRUE( allg.IsRecipKeep() );
@@ -359,6 +379,16 @@ TEST(Norm, ParseNormString) {
   {
     Norm base = Norm::L1v();
     Norm is = Norm::ParseNormString("L1v-IS");
+    EXPECT_TRUE(is.IsDeterministic());
+    EXPECT_EQ(is.Rr, AssessmentRule::ImageScoring());
+    EXPECT_EQ(is.Rd, base.Rd);
+    EXPECT_EQ(is.P, base.P);
+  }
+  // L2v-IS variant
+  EXPECT_EQ( Norm::ParseNormString("L2v-IS").GetName(), "L2v-IS" );
+  {
+    Norm base = Norm::L2v();
+    Norm is = Norm::ParseNormString("L2v-IS");
     EXPECT_TRUE(is.IsDeterministic());
     EXPECT_EQ(is.Rr, AssessmentRule::ImageScoring());
     EXPECT_EQ(is.Rd, base.Rd);
