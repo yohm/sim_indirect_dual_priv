@@ -161,7 +161,7 @@ int main(int argc, char *argv[]) {
           }
           else {
             // never stable
-            invasion["bc_min"] = 1.0;
+            invasion["bc_min"] = nullptr;
             invasion["bc_max"] = 1.0;
           }
         }
@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
           }
           else {
             // never stable
-            invasion["bc_min"] = 1.0;
+            invasion["bc_min"] = nullptr;
             invasion["bc_max"] = 1.0;
           }
         }
