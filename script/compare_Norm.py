@@ -4,6 +4,13 @@ Usage (from repo root):
   uv pip install -r script/requirements.txt
   cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release -j
   python script/compare_Norm.py
+
+This script compares a fixed set of named norms using the compiled
+inspect_PrivRepGame and inspect_EvolPrivRepGame executables.
+
+Notes:
+- Norm strings are passed by name (e.g., "L1", "L1-IS", "AllC").
+- Named norms like "Lk-IS" are supported by the C++ parser (Norm::ConstructFromName).
 """
 
 import subprocess, json, sys, shutil
@@ -14,24 +21,19 @@ ROOT = Path(__file__).resolve().parents[1]
 PRG_EXE  = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
 EPRG_EXE = str(ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame")
 
-PARAMS = {
-    "L1":     "1.00 0.00 1.00 1.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L1_IS":  "1.00 0.00 1.00 1.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-    "L2":     "1.00 0.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 1.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L2_IS":  "1.00 0.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-    "L3":     "1.00 0.00 1.00 0.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L3_IS":  "1.00 0.00 1.00 0.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-    "L4":     "1.00 0.00 1.00 0.00 1.00 0.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L4_IS":  "1.00 0.00 1.00 0.00 1.00 0.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-    "L5":     "1.00 0.00 1.00 0.00 1.00 0.00 0.00 1.00 1.00 0.00 1.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L5_IS":  "1.00 0.00 1.00 0.00 1.00 0.00 0.00 1.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-    "L6":     "1.00 0.00 1.00 0.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L6_IS":  "1.00 0.00 1.00 0.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-    "L7":     "1.00 0.00 1.00 0.00 1.00 0.00 1.00 1.00 1.00 0.00 0.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L7_IS":  "1.00 0.00 1.00 0.00 1.00 0.00 1.00 1.00 1.00 0.00 0.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-    "L8":     "1.00 0.00 1.00 0.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00 0.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00",
-    "L8_IS":  "1.00 0.00 1.00 0.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00",
-}
+# Named norms to evaluate. These are recognized by the C++ parser.
+LABELS = [
+    "L1", "L1-IS",
+    "L1v", "L1v-IS",
+    "L2", "L2-IS",
+    "L2v", "L2v-IS",
+    "L3", "L3-IS",
+    "L4", "L4-IS",
+    "L5", "L5-IS",
+    "L6", "L6-IS",
+    "L7", "L7-IS",
+    "L8", "L8-IS",
+]
 
 def run(exe: str, args: list[str]) -> str | None:
     try:
@@ -54,8 +56,6 @@ def pick_swcl_obj(obj: dict):
 def pick_invasion_bcs_obj(obj: dict):
     inv = obj.get("Invasion") or {}
     bc_max = inv.get("bc_max")
-    if bc_max is None:
-        bc_max = inv.get("b_c_max")
     bc_min = inv.get("bc_min")
     return (None if bc_max is None else float(bc_max),
             None if bc_min is None else float(bc_min))
@@ -137,28 +137,28 @@ def main():
         if not (Path(exe).exists() or shutil.which(exe)):
             print(f"[ERROR] Executable not found: {exe}", file=sys.stderr); sys.exit(1)
 
-    labels = list(PARAMS.keys())
+    labels = list(LABELS)
     rows = []
     for i, label in enumerate(labels, 1):
-        p = PARAMS[label]
+        norm_str = label
         print(f"[{i}/{len(labels)}] {label} ...")
 
-        out1 = run(PRG_EXE,  [p, "50"])
+        out1 = run(PRG_EXE,  [norm_str, "50"])
         swcl = pick_swcl_obj(parse_obj(out1)) if out1 else None
 
-        out2 = run(PRG_EXE,  [p, "49", "AllC", "1"])
+        out2 = run(PRG_EXE,  [norm_str, "49", "AllC", "1"])
         bcmax_c, bcmin_c = pick_invasion_bcs_obj(parse_obj(out2)) if out2 else (None, None)
 
-        out3 = run(EPRG_EXE, [p, "AllC"])
+        out3 = run(EPRG_EXE, [norm_str, "AllC"])
         eqpop_c = pick_eq_pop_str_obj(parse_obj(out3)) if out3 else "N/A"
 
-        out4 = run(PRG_EXE,  [p, "49", "AllD", "1"])
+        out4 = run(PRG_EXE,  [norm_str, "49", "AllD", "1"])
         bcmax_d, bcmin_d = pick_invasion_bcs_obj(parse_obj(out4)) if out4 else (None, None)
 
-        out5 = run(EPRG_EXE, [p, "AllD"])
+        out5 = run(EPRG_EXE, [norm_str, "AllD"])
         eqpop_d = pick_eq_pop_str_obj(parse_obj(out5)) if out5 else "N/A"
 
-        out6 = run(EPRG_EXE, [p])                    
+        out6 = run(EPRG_EXE, [norm_str])                    
         eq1, eq2, eq3 = pick_eq3_obj(parse_obj(out6)) if out6 else (None, None, None)
         eq_combo = ",".join([fmt(eq1), fmt(eq2), fmt(eq3)])
 
@@ -178,13 +178,17 @@ def main():
     pair_rows = []
     for k in range(1, 9):
         a = f"L{k}"
-        b = f"L{k}_IS"
+        b = f"L{k}-IS"
         pair_label = f"{a} vs. {b}"
-        if a in PARAMS and b in PARAMS:
-            out = run(EPRG_EXE, [PARAMS[a], PARAMS[b]])
-            eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
-        else:
-            eq_pop = "N/A"
+        out = run(EPRG_EXE, [a, b])
+        eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
+        pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
+
+    # Add variant pairs where available
+    for a, b in [("L1v", "L1v-IS"), ("L2v", "L2v-IS")]:
+        pair_label = f"{a} vs. {b}"
+        out = run(EPRG_EXE, [a, b])
+        eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
         pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
 
     print_pair_eqpop_table(pair_rows)
