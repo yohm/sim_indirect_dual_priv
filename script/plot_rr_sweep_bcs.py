@@ -113,7 +113,8 @@ def plot_rr_bcs(inp: str, out: Optional[str] = None, ymax: float = 4.0, xlim: Tu
         # Visible point
         plt.scatter([x], [y0], s=90, color="tab:purple", zorder=5, edgecolors="white", linewidths=0.8)
         y_txt = min(ymax - 0.05, max(1.02, y0 + 0.02))
-        plt.text(x, y_txt, base_norm_name, color="tab:purple", ha="center", va="bottom", fontsize=18)
+        plt.annotate(f"{base_norm_name}", xy=(x, y0), xytext=(-3, 3), textcoords='offset points',
+                     color="tab:purple", fontsize=18, ha="right", va="bottom")
       else:
         # Above ymax: show vertical arrow at top to indicate off-plot point
         y_head = ymax
@@ -211,7 +212,8 @@ plot_rr_bcs_bars(inp=in_path, out=None, ymax=4.0, xlim=(0.940, 0.98), base_norm_
 # %%
 in_path = "../results_tables/rr_bcs_rd187_p10_20250920_221515.tsv"  # change as needed
 out_path = "../results_tables/rr_bcs_rd187_p10_20250920_221515.pdf"
-plot_rr_bcs(inp=in_path, out=out_path, ymax=4.0, xlim=(0.94, 0.98), base_norm_name="L3")
+# out_path = None
+plot_rr_bcs(inp=in_path, out=out_path, ymax=4.0, xlim=(0.7, 1.0), base_norm_name="L3")
 
 # %%
 # find the data whose bc_min < 1.1 and sort by bc_max in descending order
