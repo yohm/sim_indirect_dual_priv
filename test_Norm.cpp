@@ -140,6 +140,46 @@ TEST(Norm, ImageScoring) {
   EXPECT_EQ( is.IDwithoutR2(), 0b10101010'1010);
 }
 
+TEST(Norm, L1v) {
+  Norm l1 = Norm::L1();
+  Norm l1v = Norm::L1v();
+  // Deterministic and keeps recipient
+  EXPECT_TRUE(l1v.IsDeterministic());
+  EXPECT_TRUE(l1v.IsRecipKeep());
+  // Same Rd as L1
+  EXPECT_EQ(l1v.Rd, l1.Rd);
+  // Action rule is DISC, different from L1 only at (B,B)
+  EXPECT_EQ(l1v.P, ActionRule::DISC());
+  EXPECT_DOUBLE_EQ(l1.CProb(B, B), 1.0);
+  EXPECT_DOUBLE_EQ(l1v.CProb(B, B), 0.0);
+  // Other entries match L1 for BG, GB, GG except BB changed
+  EXPECT_DOUBLE_EQ(l1v.CProb(B, G), l1.CProb(B, G));
+  EXPECT_DOUBLE_EQ(l1v.CProb(G, B), l1.CProb(G, B));
+  EXPECT_DOUBLE_EQ(l1v.CProb(G, G), l1.CProb(G, G));
+  // Name mapping
+  EXPECT_EQ(Norm::ParseNormString("L1v").GetName(), "L1v");
+}
+
+TEST(Norm, L2v) {
+  Norm l2 = Norm::L2();
+  Norm l2v = Norm::L2v();
+  // Deterministic and keeps recipient
+  EXPECT_TRUE(l2v.IsDeterministic());
+  EXPECT_TRUE(l2v.IsRecipKeep());
+  // Same Rd as L2
+  EXPECT_EQ(l2v.Rd, l2.Rd);
+  // Action rule is DISC, differs from L2 only at (B,B)
+  EXPECT_EQ(l2v.P, ActionRule::DISC());
+  EXPECT_DOUBLE_EQ(l2.CProb(B, B), 1.0);
+  EXPECT_DOUBLE_EQ(l2v.CProb(B, B), 0.0);
+  // Other entries match L2 for BG, GB, GG except BB changed
+  EXPECT_DOUBLE_EQ(l2v.CProb(B, G), l2.CProb(B, G));
+  EXPECT_DOUBLE_EQ(l2v.CProb(G, B), l2.CProb(G, B));
+  EXPECT_DOUBLE_EQ(l2v.CProb(G, G), l2.CProb(G, G));
+  // Name mapping
+  EXPECT_EQ(Norm::ParseNormString("L2v").GetName(), "L2v");
+}
+
 TEST(Norm, AllG) {
   Norm allg = Norm::AllG();
   EXPECT_TRUE( allg.IsRecipKeep() );
@@ -324,13 +364,64 @@ TEST(Norm, ParseNormString) {
   EXPECT_EQ( Norm::ParseNormString("AllG").GetName(), "AllG" );
   EXPECT_EQ( Norm::ParseNormString("L1").GetName(), "L1" );
   EXPECT_EQ( Norm::ParseNormString("S16").GetName(), "S16" );
+  // L*-IS variants (Rr = ImageScoring)
+  EXPECT_EQ( Norm::ParseNormString("L3-IS").GetName(), "L3-IS" );
+  {
+    Norm base = Norm::L3();
+    Norm is = Norm::ParseNormString("L3-IS");
+    EXPECT_TRUE(is.IsDeterministic());
+    EXPECT_EQ(is.Rr, AssessmentRule::ImageScoring());
+    EXPECT_EQ(is.Rd, base.Rd);
+    EXPECT_EQ(is.P, base.P);
+  }
+  // L1v-IS variant
+  EXPECT_EQ( Norm::ParseNormString("L1v-IS").GetName(), "L1v-IS" );
+  {
+    Norm base = Norm::L1v();
+    Norm is = Norm::ParseNormString("L1v-IS");
+    EXPECT_TRUE(is.IsDeterministic());
+    EXPECT_EQ(is.Rr, AssessmentRule::ImageScoring());
+    EXPECT_EQ(is.Rd, base.Rd);
+    EXPECT_EQ(is.P, base.P);
+  }
+  // L2v-IS variant
+  EXPECT_EQ( Norm::ParseNormString("L2v-IS").GetName(), "L2v-IS" );
+  {
+    Norm base = Norm::L2v();
+    Norm is = Norm::ParseNormString("L2v-IS");
+    EXPECT_TRUE(is.IsDeterministic());
+    EXPECT_EQ(is.Rr, AssessmentRule::ImageScoring());
+    EXPECT_EQ(is.Rd, base.Rd);
+    EXPECT_EQ(is.P, base.P);
+  }
 
   EXPECT_EQ( Norm::ParseNormString("GSCO-1.5").GetName(), "GSCO-1.5" );
   EXPECT_EQ( Norm::ParseNormString("857181").ID(), 857181 );
   EXPECT_EQ( Norm::ParseNormString("0xd145d").ID(), 857181 );
   EXPECT_EQ( Norm::ParseNormString("857181", true).ID(), 0xb8aeb );
 
-  const std::string s = "0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 0.0 1.0 0 1";
+  // New Rd-Rr-P triplet format for deterministic norms
+  // Example: Rd=128, Rr=132, P=2
+  Norm trip = Norm::ParseNormString("128-132-2");
+  int expected_id = (128 << 12) + (132 << 4) + 2;
+  EXPECT_TRUE(trip.IsDeterministic());
+  EXPECT_EQ(trip.ID(), expected_id);
+  EXPECT_EQ(trip.Rd.ID(), 128);
+  EXPECT_EQ(trip.Rr.ID(), 132);
+  EXPECT_EQ(trip.P.ID(), 2);
+  // Inspect string should include the triplet format
+  std::string trip_inspect = trip.Inspect();
+  EXPECT_NE(trip_inspect.find("128-132-2"), std::string::npos);
+
+  // Serialized format: [P(gg), P(gb), P(bg), P(bb)] [Rd reversed 8] [Rr reversed 8]
+  // Choose values to satisfy assertions below:
+  //   P: CProb(G,G)=1, CProb(G,B)=0, CProb(B,G)=1, CProb(B,B)=0
+  //   Rd: GProbDonor(G,G,C)=0.8, GProbDonor(B,B,D)=0.1
+  //   Rr: GProbRecip(G,G,C)=0.1, GProbRecip(B,B,D)=0.8
+  const std::string s =
+      "1.0 0.0 1.0 0.0 "
+      "0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1 "
+      "0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8";
   Norm n = Norm::ParseNormString(s);
   EXPECT_DOUBLE_EQ( n.CProb(G, G), 1.0 );
   EXPECT_DOUBLE_EQ( n.CProb(G, B), 0.0 );

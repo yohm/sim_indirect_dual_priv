@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
     std::cerr << "Usage: " << argv[0] << " [options] norm [other norms]" << std::endl;
     std::cerr << "Options:" << std::endl;
     std::cerr << "  -s         : swap G and B" << std::endl;
-    std::cerr << "Norm format: [Norm name] or [ID] or [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]" << std::endl;
+    std::cerr << "Norm format: [Norm name] or [ID] or [0xHEX_ID] or [Rd-Rr-P] or [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]" << std::endl;
     return 0;
   }
 

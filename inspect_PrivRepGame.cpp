@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Usage: " << argv[0] << " [-j param.json] norm1 size1 [norm2 size2 ...]" << std::endl;
     std::cerr << "Default parameters:" << std::endl;
     std::cerr << "  " << default_params.dump(2) << std::endl;
+    std::cerr << "Norm format: [Norm name] or [ID] or [0xHEX_ID] or [Rd-Rr-P] or [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]" << std::endl;
   };
 
   auto start = std::chrono::high_resolution_clock::now();
@@ -153,14 +154,14 @@ int main(int argc, char *argv[]) {
         }
         else if (p_rr < p_rm) {
           double b_c_max = (p_rr - p_mr) / (p_rr - p_rm);
-          invasion["b_c_max"] = b_c_max;
+          invasion["bc_max"] = b_c_max;
           if (b_c_max > 1.0) {
             invasion["bc_min"] = 1.0;
             invasion["bc_max"] = b_c_max;
           }
           else {
             // never stable
-            invasion["bc_min"] = 1.0;
+            invasion["bc_min"] = nullptr;
             invasion["bc_max"] = 1.0;
           }
         }
@@ -173,7 +174,7 @@ int main(int argc, char *argv[]) {
           }
           else {
             // never stable
-            invasion["bc_min"] = 1.0;
+            invasion["bc_min"] = nullptr;
             invasion["bc_max"] = 1.0;
           }
         }

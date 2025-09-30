@@ -321,7 +321,10 @@ public:
   std::string Inspect() const {
     std::stringstream ss;
     if (IsDeterministic()) {
-      ss << "Norm: 0x" << std::setfill('0') << std::setw(5) << std::hex << ID() << " " << std::dec << ID() << " : " << GetName() << std::endl;
+      ss << "Norm: 0x" << std::setfill('0') << std::setw(5) << std::hex << ID()
+         << " " << std::dec << ID()
+         << " [" << Rd.ID() << "-" << Rr.ID() << "-" << P.ID() << "]"
+         << " : " << GetName() << std::endl;
       ss << std::resetiosflags(std::ios_base::fmtflags(-1));
       for (int i = 3; i >= 0; i--) {
         Reputation X = static_cast<Reputation>(i / 2);
@@ -529,10 +532,23 @@ public:
                 AssessmentRule::KeepRecipient(),
                 {{1, 1, 0, 1}});
   }
+  static Norm L1v() {
+    // Variant of L1 with (B,B) -> D in the action rule
+    // Same assessment rule as L1; action rule becomes DISC (0,1,0,1)
+    return Norm({{0, 1, 0, 1, 1, 1, 0, 1}},
+                AssessmentRule::KeepRecipient(),
+                ActionRule::DISC());
+  }
   static Norm L2() {
     return Norm({{0, 1, 0, 1, 1, 0, 0, 1}},
                 AssessmentRule::KeepRecipient(),
                 {{1, 1, 0, 1}});
+  }
+  static Norm L2v() {
+    // Variant of L2 with (B,B) -> D in the action rule (DISC)
+    return Norm({{0, 1, 0, 1, 1, 0, 0, 1}},
+                AssessmentRule::KeepRecipient(),
+                ActionRule::DISC());
   }
   static Norm L3() {
     return Norm({{1, 1, 0, 1, 1, 1, 0, 1}},
@@ -563,6 +579,57 @@ public:
     return Norm({{0, 0, 0, 1, 1, 0, 0, 1}},
                 AssessmentRule::KeepRecipient(),
                 {{0, 1, 0, 1}});
+  }
+  // L*-IS variants: same as L* but with Rr = ImageScoring
+  static Norm L1_IS() {
+    Norm n = L1();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L1v_IS() {
+    Norm n = L1v();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L2_IS() {
+    Norm n = L2();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L2v_IS() {
+    Norm n = L2v();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L3_IS() {
+    Norm n = L3();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L4_IS() {
+    Norm n = L4();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L5_IS() {
+    Norm n = L5();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L6_IS() {
+    Norm n = L6();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L7_IS() {
+    Norm n = L7();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
+  }
+  static Norm L8_IS() {
+    Norm n = L8();
+    n.Rr = AssessmentRule::ImageScoring();
+    return n;
   }
   static Norm SecondarySixteen(int i) {
     if (i <= 0 || i > 16) { throw std::runtime_error("Norm: i must be between 1 and 16"); }
@@ -729,6 +796,7 @@ public:
 
   static Norm ParseNormString(const std::string& str, bool swap_gb = false) {
     std::regex re_d(R"(\d+)"); // regex for digits
+    std::regex re_triplet(R"(^([0-9]+)-([0-9]+)-([0-9]+)$)"); // regex for Rd-Rr-P deterministic triplet
     std::regex re_x(R"(^0x[0-9a-fA-F]+$)");  // regex for digits in hexadecimal
     // regular expression for 20 (possibly floating point) numbers separated by space
     std::regex re_a(R"(^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(?:\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+))){19}$)");
@@ -736,6 +804,17 @@ public:
     if (std::regex_match(str, re_d)) {
       int id = std::stoi(str);
       norm = Norm::ConstructFromID(id);
+    }
+    else if (std::regex_match(str, re_triplet)) {
+      std::smatch m;
+      std::regex_match(str, m, re_triplet);
+      // m[1]=Rd, m[2]=Rr, m[3]=P
+      int rd = std::stoi(m[1]);
+      int rr = std::stoi(m[2]);
+      int p  = std::stoi(m[3]);
+      norm = Norm(AssessmentRule::MakeDeterministicRule(rd),
+                  AssessmentRule::MakeDeterministicRule(rr),
+                  ActionRule::MakeDeterministicRule(p));
     }
     else if (std::regex_match(str, re_x)) {
       int id = std::stoi(str, nullptr, 16);
@@ -766,13 +845,25 @@ const std::vector<std::pair<int,std::string> > Norm::NormNames = {{
                                                                     {AllB().ID(), "AllB"},
                                                                     {ImageScoring().ID(), "ImageScoring"},
                                                                     {L1().ID(), "L1"},
+                                                                    {L1v().ID(), "L1v"},
                                                                     {L2().ID(), "L2"},
+                                                                    {L2v().ID(), "L2v"},
                                                                     {L3().ID(), "L3"},
                                                                     {L4().ID(), "L4"},
                                                                     {L5().ID(), "L5"},
                                                                     {L6().ID(), "L6"},
                                                                     {L7().ID(), "L7"},
                                                                     {L8().ID(), "L8"},
+                                                                    {L1_IS().ID(), "L1-IS"},
+                                                                    {L1v_IS().ID(), "L1v-IS"},
+                                                                    {L2_IS().ID(), "L2-IS"},
+                                                                    {L2v_IS().ID(), "L2v-IS"},
+                                                                    {L3_IS().ID(), "L3-IS"},
+                                                                    {L4_IS().ID(), "L4-IS"},
+                                                                    {L5_IS().ID(), "L5-IS"},
+                                                                    {L6_IS().ID(), "L6-IS"},
+                                                                    {L7_IS().ID(), "L7-IS"},
+                                                                    {L8_IS().ID(), "L8-IS"},
                                                                     {SecondarySixteen(1).ID(), "S1"},
                                                                     {SecondarySixteen(2).ID(), "S2"},
                                                                     {SecondarySixteen(3).ID(), "S3"},

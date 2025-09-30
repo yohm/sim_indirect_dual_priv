@@ -45,13 +45,20 @@ cmake --build .
 
 ### inspect_Norm
 
-Print the details of the `Norm` instance.
+Print details of a `Norm` instance.
+
+Accepted norm formats
+
+- `[NormName]` e.g., `AllC`, `L3`, `S12`, `GSCO-5.0`
+- `[ID]` or `[0xHEX_ID]` e.g., `857181`, `0xd145d`
+- `[Rd-Rr-P]` deterministic triplet, e.g., `128-132-2` (Rd=donor assessment ID, Rr=recipient assessment ID, P=action ID)
+- `20-number serialization` e.g., `c1 c2 c3 c4 g1..g8 r1..r8`
 
 Usage:
 
 ```bash
 $ ./inspect_Norm AllC
-Norm: 0xffccf 1047759 : AllC
+Norm: 0xffccf 1047759 [255-204-15] : AllC
 (G->G):cGG:GG	(G->B):cGG:BB	(B->G):cGG:GG	(B->B):cGG:BB
 (G->G): P:1.000 : R1 (c:1.000,d:1.000) : R2 (c:1.000,d:1.000)
 (G->B): P:1.000 : R1 (c:1.000,d:1.000) : R2 (c:0.000,d:0.000)
@@ -60,9 +67,17 @@ Norm: 0xffccf 1047759 : AllC
 Serialized: 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00
 ```
 
-Named norms are AllC, AllD, AllG, AllB, ImageScoring, L1, L2, L3, L4, L5, L6, L7, L8, and SecondarySixteen(S1-S16).
+Triplet example:
 
-For other norms, you can specify the norm as a string having 20 floating-point numbers separated by spaces.
+```bash
+$ ./inspect_Norm 128-132-2
+Norm: 0x0d145d 857181 [128-132-2] : ImageScoring
+...
+```
+
+Named norms are AllC, AllD, AllG, AllB, ImageScoring, L1–L8, L1-IS–L8-IS (L* with Rr = ImageScoring), and SecondarySixteen (S1–S16).
+
+You can also specify a norm by 20 floating-point numbers separated by spaces:
 
 ```bash
 $ ./inspect_Norm '1 0 1 0  1.0 0.9 0.8 0.7 0.6 0.5 0.4 0.3  1 0 1 0 1 0 1 0'
@@ -76,6 +91,8 @@ Serialized: 1.00 0.00 1.00 0.00 1.00 0.90 0.80 0.70 0.60 0.50 0.40 0.30 1.00 0.0
 ### inspect_PublicRepGame
 
 Print the details of the Norm under public assessment model.
+
+Accepted norm formats are the same as `inspect_Norm` (name, decimal/hex ID, Rd-Rr-P triplet, or 20-number serialization).
 
 ```bash
 $ ./cmake-build-release/inspect_PublicRepGame L3
@@ -98,6 +115,8 @@ Usage:
 
 ```bash
 ./cmake-build-release/inspect_PrivRepGame [-j <param.json|json-string>] [-g] <Norm1> <n1> [<Norm2> <n2> ...]
+
+Norm arguments accept the same formats as `inspect_Norm` (name, ID, 0xHEX_ID, Rd-Rr-P, or 20 numbers).
 ```
 
 ```bash
@@ -176,6 +195,8 @@ Usage:
 ```bash
 ./cmake-build-release/inspect_EvolPrivRepGame [-j <param.json|json-string>] <Norm>
 ./cmake-build-release/inspect_EvolPrivRepGame [-j <param.json|json-string>] <Norm1> <Norm2>
+
+Norm arguments accept the same formats as `inspect_Norm` (name, ID, 0xHEX_ID, Rd-Rr-P, or 20 numbers).
 ```
 
 Notes:
