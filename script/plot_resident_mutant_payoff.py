@@ -15,7 +15,12 @@ Edge handling (as requested):
   - If mutant fraction f=1, compute ONLY mutant payoff; resident is set to NaN (not computed).
   Matplotlib breaks lines at NaN, so only computable points are connected.
 
+Usage (from repo root):
+  uv venv .venv && source .venv/bin/activate
+  uv pip install -r script/requirements.txt
+
 Usage example:
+  # show window for L6 vs. ALLD
   python script/plot_resident_mutant_payoff.py \
       --resident L6 --mutant AllD \
       --benefit 5 --cost 1 \
@@ -23,6 +28,15 @@ Usage example:
       --build-dir cmake-build-release \
       --params '{"t_init":1000,"t_measure":1000,"q":1.0,"mu_impl":0.0,"mu_percept":0.0,"mu_assess1":0.05,"mu_assess2":0.0,"seed":123456789}' \
       --out figures/payoff_L6_vs_AllD.png --show
+
+  # multiple norms, save each as figures/payoff_<resident>_vs_<mutant>.(png|pdf|svg) without showing windows
+  python script/plot_resident_mutant_payoff.py \
+      --resident L6 --mutant AllD \
+      --benefit 5 --cost 1 \
+      --N 50 --points 51 \
+      --build-dir cmake-build-release \
+      --params '{"t_init":1000,"t_measure":1000,"q":1.0,"mu_impl":0.0,"mu_percept":0.0,"mu_assess1":0.05,"mu_assess2":0.0,"seed":123456789}' \
+      --save --format pdf --no-show
 """
 
 import argparse
@@ -107,8 +121,14 @@ def main():
     ap.add_argument("--points", type=int, default=51, help="Number of f grid points in [0,1] (default: 51)")
     ap.add_argument("--build-dir", default="cmake-build-release", help="Directory containing inspect_PrivRepGame")
     ap.add_argument("--params", default=None, help="JSON string or path to JSON with PRG params (-j); t_init/t_measure etc.")
-    ap.add_argument("--out", default=None, help="Output figure path (PNG/PDF/SVG). If omitted and --show not set, shows window.")
+    ap.add_argument("--out", default=None, help="Output figure path (PNG/PDF/SVG).")
+    ap.add_argument("--save", action="store_true",
+                help="Save to figures/payoff_<resident>_vs_<mutant>.<format> unless --out is given.")
+    ap.add_argument("--format", choices=["png", "pdf", "svg"], default="png",
+                help="Output format when saving without --out (default: png)")
     ap.add_argument("--show", action="store_true", help="Show window")
+    ap.add_argument("--no-show", action="store_true", help="Do not open a window.")
+
     args = ap.parse_args()
 
     inspect_prg = os.path.join(args.build_dir, "inspect_PrivRepGame")
@@ -172,6 +192,7 @@ def main():
                 if "NormCooperationLevels" not in data:
                     raise RuntimeError("inspect_PrivRepGame did not return NormCooperationLevels")
                 c_levels = data["NormCooperationLevels"]
+                c_levels = [[(float(x) if x is not None else np.nan) for x in row] for row in c_levels]
                 pr, pm = compute_payoffs_from_clevels(c_levels, f, args.benefit, args.cost)
 
             pay_res.append(pr)
@@ -202,12 +223,22 @@ def main():
     plt.legend(frameon=False)
     plt.tight_layout()
 
+    # --- decide output path ---
+    out_path = None
     if args.out:
-        os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-        plt.savefig(args.out, dpi=150)
-        print(f"Saved: {args.out}")
+        out_path = args.out
+    elif args.save:
+        os.makedirs("figures", exist_ok=True)
+        out_path = os.path.join("figures", f"payoff_{args.resident}_vs_{args.mutant}.{args.format}")
 
-    if args.show or not args.out:
+    # --- save / show ---
+    if out_path:
+        os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+        plt.savefig(out_path, dpi=150)
+        print(f"Saved: {out_path}")
+
+    # show if explicitly requested, or if not told to suppress and nothing was saved
+    if args.show or (not args.no_show and not out_path):
         plt.show()
 
 

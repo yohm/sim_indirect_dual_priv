@@ -276,15 +276,15 @@ cmake --build cmake-build-release -j
 ### How to run the scripts
 
 - Image matrix simulation/plot (no C++ dependency):
-  - `python script/ImageMatrix.py --norm L3 --N 50 --ep 0.05 --q 0.9 --nIt 20000 --seed 0`
-  - `python script/ImageMatrix.py --norm all`
+  - `python script/plot_image_matrix.py --norm L3 --N 50 --ep 0.05 --q 0.9 --nIt 20000 --seed 0`
+  - `python script/plot_image_matrix.py --norm all`
 
 - Norm comparisons (requires built executables):
   - `python script/compare_Norm.py`
 
 - Triadic competition plot (requires built executables):
-  - `python script/TriadicCompetition.py L1`
-  - or pass a full parameter string: `python script/TriadicCompetition.py "1.00 0.00 ..."`
+  - `python script/plot_triadic_competition.py --norms L1`
+  - or pass a full parameter string: `python script/plot_triadic_competition.py "1.00 0.00 ..."`
 
 ## Tests
 
