@@ -7,14 +7,7 @@ Usage (from repo root):
   python script/compare_Norm.py
 
 Examples:
-  # 観察確率 q と認知誤り mu_percept、評価誤り mu_assess1 を変更
-  python script/compare_Norm.py --q 0.9 --N 50 --benefit 5.0 --beta 1.0 --mu-assess1 0.01 --mu-assess2 0.01 --mu-impl 0.00 --mu-percept 0.00 
-
-  # 進化側の母集団サイズやベネフィット/選択強度も変更
-  python script/compare_Norm.py --N 30 --benefit 5.0 --beta 1.0
-
-  # 計測長や初期化長、実装誤りなども調整
-  python script/compare_Norm.py --t-init 1000 --t-measure 2000 --mu-impl 0.0 --seed 123456789
+  python script/compare_Norm.py --q 0.9 --N 50 --benefit 5.0 --beta 1.0 --mu-assess1 0.01 --mu-assess2 0.01 --mu-impl 0.00 --mu-percept 0.05 
 """
 
 import argparse
