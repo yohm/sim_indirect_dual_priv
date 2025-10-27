@@ -3,17 +3,25 @@ Usage (from repo root):
   uv venv .venv && source .venv/bin/activate
   uv pip install -r script/requirements.txt
   cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release -j
+  # default params
   python script/compare_Norm.py
 
-This script compares a fixed set of named norms using the compiled
-inspect_PrivRepGame and inspect_EvolPrivRepGame executables.
+Examples:
+  # 観察確率 q と認知誤り mu_percept、評価誤り mu_assess1 を変更
+  python script/compare_Norm.py --q 0.9 --N 50 --benefit 5.0 --beta 1.0 --mu-assess1 0.01 --mu-assess2 0.01 --mu-impl 0.00 --mu-percept 0.00 
 
-Notes:
-- Norm strings are passed by name (e.g., "L1", "L1-IS", "AllC").
-- Named norms like "Lk-IS" are supported by the C++ parser (Norm::ConstructFromName).
+  # 進化側の母集団サイズやベネフィット/選択強度も変更
+  python script/compare_Norm.py --N 30 --benefit 5.0 --beta 1.0
+
+  # 計測長や初期化長、実装誤りなども調整
+  python script/compare_Norm.py --t-init 1000 --t-measure 2000 --mu-impl 0.0 --seed 123456789
 """
 
-import subprocess, json, sys, shutil
+import argparse
+import subprocess
+import json
+import sys
+import shutil
 from pathlib import Path
 
 # Resolve repo root and executables regardless of CWD
@@ -21,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PRG_EXE  = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
 EPRG_EXE = str(ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame")
 
-# Named norms to evaluate. These are recognized by the C++ parser.
+# Named norms to evaluate. Recognized by the C++ parser (Norm::ConstructFromName).
 LABELS = [
     "L1", "L1-IS",
     "L1v", "L1v-IS",
@@ -132,10 +140,76 @@ def print_pair_eqpop_table(rows):
     for r in rows:
         print(line(r["Pair"], r["eq_pop"]))
 
+
+def build_prg_params(args) -> dict:
+    """
+    Parameters for inspect_PrivRepGame (-j)
+    Keys must match inspect_PrivRepGame.cpp's default set:
+      t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, seed
+    """
+    return {
+        "t_init":    int(args.t_init),
+        "t_measure": int(args.t_measure),
+        "q":         float(args.q),
+        "mu_impl":   float(args.mu_impl),
+        "mu_percept":float(args.mu_percept),
+        "mu_assess1":float(args.mu_assess1),
+        "mu_assess2":float(args.mu_assess2),
+        "seed":      int(args.seed),
+    }
+
+def build_eprg_params(args) -> dict:
+    """
+    Parameters for inspect_EvolPrivRepGame (-j)
+    EvolPrivRepGame::Parameters + optional benefit/beta.
+    """
+    j = {
+        "N":          int(args.N),
+        "t_init":     int(args.t_init),
+        "t_measure":  int(args.t_measure),
+        "q":          float(args.q),
+        "mu_impl":    float(args.mu_impl),
+        "mu_percept": float(args.mu_percept),
+        "mu_assess1": float(args.mu_assess1),
+        "mu_assess2": float(args.mu_assess2),
+        "seed":       int(args.seed),
+        "benefit":    float(args.benefit),
+        "beta":       float(args.beta),
+    }
+    return j
+
+
 def main():
+    parser = argparse.ArgumentParser(description="Compare norms with customizable error/observation parameters.")
+    # --- shared sim parameters ---
+    parser.add_argument("--t-init", type=int, default=1000, help="initialization steps (default: 1000)")
+    parser.add_argument("--t-measure", type=int, default=1000, help="measurement steps (default: 1000)")
+    parser.add_argument("--q", type=float, default=1.0, help="observation probability q (default: 1.0)")
+    parser.add_argument("--mu-impl", type=float, default=0.0, help="implementation error (default: 0.0)")
+    parser.add_argument("--mu-percept", type=float, default=0.0, help="perception error (default: 0.0)")
+    parser.add_argument("--mu-assess1", type=float, default=0.05, help="assessment error 1 (default: 0.05)")
+    parser.add_argument("--mu-assess2", type=float, default=0.0, help="assessment error 2 (default: 0.0)")
+    parser.add_argument("--seed", type=int, default=123456789, help="RNG seed (default: 123456789)")
+
+    # --- sizes / evolutionary-specific ---
+    parser.add_argument("--N", type=int, default=30, help="population size for evolutionary game (EPRG) (default: 30)")
+    parser.add_argument("--benefit", type=float, default=5.0, help="benefit b (default: 5.0)")
+    parser.add_argument("--beta", type=float, default=1.0, help="selection strength beta (default: 1.0)")
+
+    # --- resident/mutant sizes for PRG single/mutant runs ---
+    parser.add_argument("--Nprg", type=int, default=50, help="population size used for PRG monomorphic runs (default: 50)")
+    parser.add_argument("--mutant", type=int, default=1, help="mutant count in invasion checks (default: 1)")
+
+    args = parser.parse_args()
+
+    # Check executables
     for exe in (PRG_EXE, EPRG_EXE):
         if not (Path(exe).exists() or shutil.which(exe)):
             print(f"[ERROR] Executable not found: {exe}", file=sys.stderr); sys.exit(1)
+
+    # Build JSON payloads (passed inline to -j)
+    prg_j  = json.dumps(build_prg_params(args))
+    eprg_j = json.dumps(build_eprg_params(args))
 
     labels = list(LABELS)
     rows = []
@@ -143,22 +217,28 @@ def main():
         norm_str = label
         print(f"[{i}/{len(labels)}] {label} ...")
 
-        out1 = run(PRG_EXE,  [norm_str, "50"])
+        # Monomorphic SWCL with PRG (size = Nprg)
+        out1 = run(PRG_EXE,  ["-j", prg_j, norm_str, str(args.Nprg)])
         swcl = pick_swcl_obj(parse_obj(out1)) if out1 else None
 
-        out2 = run(PRG_EXE,  [norm_str, "49", "AllC", "1"])
+        # Invasion analysis vs AllC (resident size = Nprg-1, mutant = mutant)
+        out2 = run(PRG_EXE,  ["-j", prg_j, norm_str, str(args.Nprg-args.mutant), "AllC", str(args.mutant)])
         bcmax_c, bcmin_c = pick_invasion_bcs_obj(parse_obj(out2)) if out2 else (None, None)
 
-        out3 = run(EPRG_EXE, [norm_str, "AllC"])
+        # Equilibrium population (label vs AllC) with EPRG
+        out3 = run(EPRG_EXE, ["-j", eprg_j, norm_str, "AllC"])
         eqpop_c = pick_eq_pop_str_obj(parse_obj(out3)) if out3 else "N/A"
 
-        out4 = run(PRG_EXE,  [norm_str, "49", "AllD", "1"])
+        # Invasion analysis vs AllD
+        out4 = run(PRG_EXE,  ["-j", prg_j, norm_str, str(args.Nprg-args.mutant), "AllD", str(args.mutant)])
         bcmax_d, bcmin_d = pick_invasion_bcs_obj(parse_obj(out4)) if out4 else (None, None)
 
-        out5 = run(EPRG_EXE, [norm_str, "AllD"])
+        # Equilibrium population (label vs AllD) with EPRG
+        out5 = run(EPRG_EXE, ["-j", eprg_j, norm_str, "AllD"])
         eqpop_d = pick_eq_pop_str_obj(parse_obj(out5)) if out5 else "N/A"
 
-        out6 = run(EPRG_EXE, [norm_str])                    
+        # 3-species equilibrium (label + AllC + AllD) with EPRG
+        out6 = run(EPRG_EXE, ["-j", eprg_j, norm_str])
         eq1, eq2, eq3 = pick_eq3_obj(parse_obj(out6)) if out6 else (None, None, None)
         eq_combo = ",".join([fmt(eq1), fmt(eq2), fmt(eq3)])
 
@@ -175,23 +255,24 @@ def main():
     print()
     print_table(rows)
 
+    # Pairwise focal vs focal-IS equilibrium populations (EPRG)
     pair_rows = []
-    for k in range(1, 9):
+    for k in range(1, 8+1):
         a = f"L{k}"
         b = f"L{k}-IS"
         pair_label = f"{a} vs. {b}"
-        out = run(EPRG_EXE, [a, b])
+        out = run(EPRG_EXE, ["-j", eprg_j, a, b])
         eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
         pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
 
-    # Add variant pairs where available
     for a, b in [("L1v", "L1v-IS"), ("L2v", "L2v-IS")]:
         pair_label = f"{a} vs. {b}"
-        out = run(EPRG_EXE, [a, b])
+        out = run(EPRG_EXE, ["-j", eprg_j, a, b])
         eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
         pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
 
     print_pair_eqpop_table(pair_rows)
+
 
 if __name__ == "__main__":
     main()

@@ -22,20 +22,20 @@ Usage (from repo root):
 Usage example:
   # show window for L6 vs. ALLD
   python script/plot_resident_mutant_payoff.py \
-      --resident L6 --mutant AllD \
+      --resident L6-IS --mutant AllD \
       --benefit 5 --cost 1 \
       --N 50 --points 51 \
       --build-dir cmake-build-release \
-      --params '{"t_init":1000,"t_measure":1000,"q":1.0,"mu_impl":0.0,"mu_percept":0.0,"mu_assess1":0.05,"mu_assess2":0.0,"seed":123456789}' \
+      --params '{"t_init":1000,"t_measure":1000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.00,"mu_percept":0.00,"seed":123456789}' \
       --out figures/payoff_L6_vs_AllD.png --show
 
   # multiple norms, save each as figures/payoff_<resident>_vs_<mutant>.(png|pdf|svg) without showing windows
   python script/plot_resident_mutant_payoff.py \
-      --resident L6 --mutant AllD \
+      --resident L3 --mutant AllC \
       --benefit 5 --cost 1 \
       --N 50 --points 51 \
       --build-dir cmake-build-release \
-      --params '{"t_init":1000,"t_measure":1000,"q":1.0,"mu_impl":0.0,"mu_percept":0.0,"mu_assess1":0.05,"mu_assess2":0.0,"seed":123456789}' \
+      --params '{"t_init":1000,"t_measure":1000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.00,"mu_percept":0.05,"seed":123456789}' \
       --save --format pdf --no-show
 """
 

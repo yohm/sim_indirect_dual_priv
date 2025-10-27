@@ -20,9 +20,9 @@ Usage examples:
   python script/plot_triadic_competition.py --norms L1
 
   # multiple norms, save each as figures/triad_<norm>.(png|pdf|svg) without showing windows
-  python script/plot_triadic_competition.py --norms L1 L2 L3 L4 L5 L6 L7 L8 L1-IS L2-IS L3-IS L4-IS L5-IS L6-IS L7-IS L8-IS \
+  python script/plot_triadic_competition.py --norms L1 L1-IS L1v L1v-IS L2 L2-IS L2v L2v-IS L3 L3-IS L4 L4-IS L5 L5-IS L6 L6-IS L7 L7-IS L8 L8-IS\
       --build-dir cmake-build-release \
-      --params '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":0.9,"mu_assess1":0.05,"mu_assess2":0.0,"mu_impl":0.0,"mu_percept":0.0,"seed":123456789}' \
+      --params '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.00,"mu_percept":0.05,"seed":123456789}' \
       --save --format pdf --no-show
 
   # pass PRG params via JSON file and custom build dir
