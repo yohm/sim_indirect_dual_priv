@@ -50,11 +50,24 @@ struct SweepRow {
 };
 
 void PrintUsage(const char* exe) {
-  std::cout << "Usage: " << exe << " <norm_string> [options]\n";
+  std::cout << "Usage: " << exe << " [options]\n";
   std::cout << "Options:\n";
-  std::cout << "  --params <json|path> Parameters JSON inline or path (t_init, t_measure, q, mus, seed, N, benefit, beta)\n";
+  std::cout << "  --params <json|path> Parameters JSON inline or path\n";
   std::cout << "  --out <path>         Output TSV path (default: R2_sweep.tsv)\n";
   std::cout << "  --help               Show this message\n";
+  std::cout << "\nJSON parameters:\n";
+  std::cout << "  base_norm            (string) required\n";
+  std::cout << "  N                    (size_t) EvolPrivRepGame population size\n";
+  std::cout << "  t_init               (size_t) initialization steps\n";
+  std::cout << "  t_measure            (size_t) measurement steps\n";
+  std::cout << "  q                    (double) observation probability\n";
+  std::cout << "  mu_impl              (double) implementation error\n";
+  std::cout << "  mu_percept           (double) perception error\n";
+  std::cout << "  mu_assess1           (double) assessment error 1\n";
+  std::cout << "  mu_assess2           (double) assessment error 2\n";
+  std::cout << "  _seed                (uint64_t) RNG seed\n";
+  std::cout << "  benefit              (double) benefit parameter\n";
+  std::cout << "  beta                 (double) selection strength\n";
 }
 
 std::string RequireValue(int argc, char** argv, int& i, const std::string& flag) {
