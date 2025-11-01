@@ -85,6 +85,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
   highlights = {
     204: ("tab:purple", base_norm_name),
     170: ("tab:orange", f"{base_norm_name}-IS"),
+    172: ("tab:green", "good-donor-trusting"),
   }
   for target_rr, (color, label) in highlights.items():
     if target_rr in by_rr:
@@ -124,6 +125,7 @@ def plot_rr_bcs_bars(by_rr: Dict[int, Tuple[float, Optional[float], Optional[flo
   highlights = {
     204: ("tab:purple", base_norm_name),
     170: ("tab:orange", f"{base_norm_name}-IS"),
+    172: ("tab:green", "good-donor-trusting"),
   }
   for target_rr, (color, label) in highlights.items():
     if target_rr in by_rr:

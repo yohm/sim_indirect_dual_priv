@@ -63,7 +63,8 @@ def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int]):
 
   highlights = [
     (204, "red", "*", "Rr=204 (base)"),
-    (170, "blue", "x", "Rr=170 (IS)")
+    (170, "blue", "x", "Rr=170 (IS)"),
+    (172, "green", "^", "Rr=172 (good-donor-trusting)")
   ]
   for target, color, marker, label in highlights:
     idxs = [i for i, rr in enumerate(rrs) if rr == target]
