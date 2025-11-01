@@ -335,6 +335,7 @@ int main(int argc, char** argv) {
     nlohmann::json cfg_json = nlohmann::json(cfg.params);
     cfg_json["benefit"] = cfg.benefit;
     cfg_json["beta"] = cfg.beta;
+    cfg_json["base_norm"] = norm_string;
     std::cerr << "SimulationConfig: " << cfg_json.dump(2) << '\n';
 
     Norm base_norm = Norm::ParseNormString(norm_string);
