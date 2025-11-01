@@ -23,7 +23,6 @@ constexpr int kRrStart = 0;
 constexpr int kRrEnd = 255;
 
 struct ProgramOptions {
-  std::string norm;
   std::optional<std::string> params_arg;
   std::optional<std::string> out_path;
 };
@@ -77,9 +76,8 @@ ProgramOptions ParseArgs(int argc, char** argv) {
   }
 
   ProgramOptions opt;
-  opt.norm = argv[1];
 
-  for (int i = 2; i < argc; ++i) {
+  for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg == "--help") {
       PrintUsage(argv[0]);
@@ -121,7 +119,7 @@ SimulationConfig BuildSimulationConfig(const ProgramOptions& opt) {
   }
 
   if (raw.is_object()) {
-    std::set<std::string> allowed = {"N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "seed", "benefit", "beta"};
+    std::set<std::string> allowed = {"N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "_seed", "benefit", "beta", "base_norm"};
     for (const auto& item : raw.items()) {
       if (!allowed.count(item.key())) {
         throw std::runtime_error("unknown parameter key: " + item.key());
@@ -135,6 +133,9 @@ SimulationConfig BuildSimulationConfig(const ProgramOptions& opt) {
     for_params.erase("beta");
   }
   cfg.params = for_params.get<EvolPrivRepGame::Parameters>();
+  if (raw.is_object() && raw.contains("_seed")) {
+    cfg.params.seed = raw.at("_seed").get<uint64_t>();
+  }
 
   if (cfg.params.N < 2) {
     throw std::runtime_error("population size N must be >= 2");
@@ -324,12 +325,19 @@ int main(int argc, char** argv) {
     ProgramOptions opt = ParseArgs(argc, argv);
     SimulationConfig cfg = BuildSimulationConfig(opt);
 
+    std::string norm_string;
+    if (cfg.raw_params && cfg.raw_params->contains("base_norm")) {
+      norm_string = (*cfg.raw_params)["base_norm"].get<std::string>();
+    } else {
+      throw std::runtime_error("base_norm must be provided in parameters JSON");
+    }
+
     nlohmann::json cfg_json = nlohmann::json(cfg.params);
     cfg_json["benefit"] = cfg.benefit;
     cfg_json["beta"] = cfg.beta;
     std::cerr << "SimulationConfig: " << cfg_json.dump(2) << '\n';
 
-    Norm base_norm = Norm::ParseNormString(opt.norm);
+    Norm base_norm = Norm::ParseNormString(norm_string);
     int rd_id = base_norm.Rd.ID();
     int p_id = base_norm.P.ID();
     if (rd_id < 0 || p_id < 0) {
