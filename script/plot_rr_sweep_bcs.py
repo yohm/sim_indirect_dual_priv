@@ -67,8 +67,7 @@ def load_rr_bcs(path: Path) -> Dict[int, Tuple[float, Optional[float], Optional[
 
 def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
                        ymax: float = 5.0,
-                       xlim: Tuple[float, float] = (0.5, 1.0),
-                       base_norm_name: str = "L6"):
+                       xlim: Tuple[float, float] = (0.5, 1.0)):
   fig, ax = plt.subplots(figsize=(6, 4))
   ax.tick_params(axis='both', labelsize=16)
   ax.spines['top'].set_visible(False)
@@ -83,8 +82,8 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
   ax.scatter(xs, ys, s=20, color="tab:blue", alpha=0.6, edgecolors="none")
 
   highlights = {
-    204: ("tab:purple", base_norm_name),
-    170: ("tab:orange", f"{base_norm_name}-IS"),
+    204: ("tab:purple", "base"),
+    170: ("tab:orange", "IS"),
     172: ("tab:green", "good-donor-trusting"),
   }
   for target_rr, (color, label) in highlights.items():
@@ -107,8 +106,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
 
 def plot_rr_bcs_bars(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
                      ymax: float = 5.0,
-                     xlim: Tuple[float, float] = (0.5, 1.0),
-                     base_norm_name: str = "L6"):
+                     xlim: Tuple[float, float] = (0.5, 1.0)):
   fig, ax = plt.subplots(figsize=(6, 4))
   ax.tick_params(axis='both', labelsize=16)
   ax.spines['top'].set_visible(False)
@@ -123,8 +121,8 @@ def plot_rr_bcs_bars(by_rr: Dict[int, Tuple[float, Optional[float], Optional[flo
     ax.vlines(self_coop, bc_min, y_top, colors="tab:blue", alpha=0.5, linewidth=1.5)
 
   highlights = {
-    204: ("tab:purple", base_norm_name),
-    170: ("tab:orange", f"{base_norm_name}-IS"),
+    204: ("tab:purple", "base"),
+    170: ("tab:orange", "-IS"),
     172: ("tab:green", "good-donor-trusting"),
   }
   for target_rr, (color, label) in highlights.items():
@@ -149,20 +147,19 @@ def plot_rr_bcs_bars(by_rr: Dict[int, Tuple[float, Optional[float], Optional[flo
 IN_PATH = Path("../R2_sweep.tsv")  # adjust as needed
 YMAX = 5.0
 XLIM = (0.5, 1.0)
-BASE_NAME = "L6"
 
 by_rr_data = None
 if IN_PATH.exists():
   by_rr_data = load_rr_bcs(IN_PATH)
 
 if by_rr_data:
-  fig_points, ax_points = plot_rr_bcs_points(by_rr_data, ymax=YMAX, xlim=XLIM, base_norm_name=BASE_NAME)
+  fig_points, ax_points = plot_rr_bcs_points(by_rr_data, ymax=YMAX, xlim=XLIM)
   try:
     display(fig_points)
   except NameError:
     pass
 
-  fig_bars, ax_bars = plot_rr_bcs_bars(by_rr_data, ymax=YMAX, xlim=XLIM, base_norm_name=BASE_NAME)
+  fig_bars, ax_bars = plot_rr_bcs_bars(by_rr_data, ymax=YMAX, xlim=XLIM)
   try:
     display(fig_bars)
   except NameError:
