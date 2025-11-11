@@ -1,227 +1,200 @@
 #%%
 #!/usr/bin/env python3
 """
-Plot results from script/sweep_rr_bcs.py.
+Plot results from main_SweepR2.cpp sweep (bc columns).
 
-Reads a TSV file produced by sweep_rr_bcs.py and plots:
-  - x-axis: self_coop
-  - y-axis: stable b/c range
-
-For each Rr entry, draws a vertical line at x=self_coop from y=bc_min to
-  y=bc_max. If bc_max is None/null, treats it as infinity and draws up to a
-  configurable y-limit.
+Reads the TSV written by main_SweepR2 and visualises the
+Rr sweep in two variants:
+  - Points: self_coop vs bc_min(AllD)
+  - Bars:   vertical range between bc_min and bc_max
 
 VS Code Interactive tips:
-  - This file is structured with '#%%' cells for stepwise execution.
-  - Run the "Interactive Defaults" cell and then the "Plot Function" invocation.
+  - This file uses '#%%' cells. Edit IN_PATH in the "Interactive defaults"
+    cell, then the quick-plot cells will display figures when data is present.
 
 CLI usage:
-  python script/plot_rr_sweep_bcs.py --in results_tables/rr_bcs_rd153_p10_20250920_164955.tsv \
-                                     --out figures/rr_bcs_rd153_p10.png --ymax 20
+  python script/plot_rr_sweep_bcs.py --in R2_sweep.tsv --out figures/rr_bcs.png --ymax 6
 
 Options:
-  --show   Display the plot window instead of saving (or do both if --out is also given).
-  --ymax   Upper y-limit used to visualize infinite bc_max (default: 5).
+  --out   Optional path for the saved figure.
+  --show  Display the plot window (or automatically when no --out).
+  --ymax  Max y-axis limit for bc values (default: 5.0).
 """
 
+#%% Imports
 import argparse
-import json
-import os
-from typing import Optional, Dict, Tuple as Tup
+import csv
+import math
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
 import matplotlib.pyplot as plt
-import math
 
+#%% Data loading
 
-def parse_float_or_none(s: str) -> Optional[float]:
-  s = s.strip()
-  if s in ("", "None", "none", "null", "nan"):
+def parse_optional_float(value: str) -> Optional[float]:
+  value = value.strip()
+  if value in {"", "None", "null", "nan"}:
     return None
   try:
-    return float(s)
-  except Exception:
+    return float(value)
+  except ValueError:
     return None
 
-#%% Helpers
 
-def load_rr_bcs(path: str):
-  meta = {}
-  by_rr: Dict[int, Tup[float, float, Optional[float]]] = {}
+def load_rr_bcs(path: Path) -> Dict[int, Tuple[float, Optional[float], Optional[float]]]:
+  by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]] = {}
 
-  with open(path, "r") as f:
-    lines = f.read().splitlines()
+  with path.open("r", newline="") as f:
+    reader = csv.reader(f, delimiter="\t")
+    for row in reader:
+      if not row or row[0].startswith("#"):
+        continue
+      if len(row) < 4:
+        continue
+      try:
+        rr = int(row[0])
+        self_coop = float(row[1])
+        bc_min = parse_optional_float(row[2])
+        bc_max = parse_optional_float(row[3])
+      except ValueError:
+        continue
+      by_rr[rr] = (self_coop, bc_min, bc_max)
 
-  # Parse meta if present on first line
-  if lines and lines[0].startswith("# sweep_rr_bcs meta:"):
-    try:
-      meta_json = lines[0].split(":", 1)[1].strip()
-      meta = json.loads(meta_json)
-    except Exception:
-      meta = {}
-    # Drop meta line from further parsing
-    lines = lines[1:]
+  return by_rr
 
-  # Ignore comment/header lines; expected columns: rr, self_coop, bc_min(AllD), bc_max(AllC)
-  for ln in lines:
-    if not ln.strip() or ln.lstrip().startswith("#"):
-      continue
-    parts = [p.strip() for p in ln.split("\t")]
-    if len(parts) < 4:
-      continue
-    try:
-      rr = int(parts[0])
-      self_coop = parse_float_or_none(parts[1])
-      bc_min = parse_float_or_none(parts[2])
-      bc_max = parse_float_or_none(parts[3])
-    except Exception:
-      continue
-    if self_coop is None or bc_min is None:
-      continue
-    by_rr[rr] = (self_coop, bc_min, bc_max)
+#%% Plotting helpers
 
-  return by_rr, meta
-
-#%% Plotting
-def plot_rr_bcs(inp: str, out: Optional[str] = None, ymax: float = 4.0, xlim: Tup[float, float]=(0.48, 1.0), base_norm_name: str="L6"):
-  by_rr, meta = load_rr_bcs(inp)
-  if not by_rr:
-    raise SystemExit("No data points could be read from the input file.")
-
-  plt.figure(figsize=(6, 4))
-  ax = plt.gca()
-  # Larger fonts and cleaner frame
+def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
+                       ymax: float = 5.0,
+                       xlim: Tuple[float, float] = (0.5, 1.0)):
+  fig, ax = plt.subplots(figsize=(6, 4))
   ax.tick_params(axis='both', labelsize=16)
   ax.spines['top'].set_visible(False)
   ax.spines['right'].set_visible(False)
 
-  # Plot points (self_coop, bc_min); ignore bc_max entirely
   xs, ys = [], []
-  for rr, (x, y0, _y1) in by_rr.items():
-    if y0 is None or not math.isfinite(y0):
+  for rr, (self_coop, bc_min, _) in by_rr.items():
+    if bc_min is None or not math.isfinite(bc_min):
       continue
-    xs.append(x)
-    ys.append(y0)
-  plt.scatter(xs, ys, s=20, color="tab:blue", alpha=0.6, edgecolors="none")
+    xs.append(self_coop)
+    ys.append(bc_min)
+  ax.scatter(xs, ys, s=20, color="tab:blue", alpha=0.6, edgecolors="none")
 
-  # Highlight base norm (Rr=KeepRecipient -> 204) and L6-IS (Rr=ImageScoring -> 170)
-  rr_base = 204
-  rr_is = 170
-  if rr_base in by_rr:
-    x, y0, _y1 = by_rr[rr_base]
-    if y0 is not None and math.isfinite(y0):
-      if y0 <= ymax:
-        # Visible point
-        plt.scatter([x], [y0], s=90, color="tab:purple", zorder=5, edgecolors="white", linewidths=0.8)
-        y_txt = min(ymax - 0.05, max(1.02, y0 + 0.02))
-        plt.annotate(f"{base_norm_name}", xy=(x, y0), xytext=(-3, 3), textcoords='offset points',
-                     color="tab:purple", fontsize=18, ha="right", va="bottom")
-      else:
-        # Above ymax: show vertical arrow at top to indicate off-plot point
-        y_head = ymax
-        y_tail = max(1.05, y_head - 0.5)
-        plt.annotate("", xy=(x, y_head), xytext=(x, y_tail),
-                     arrowprops=dict(arrowstyle='-|>', color='tab:purple', linewidth=1.2))
-        y_txt = ymax - 0.75
-        plt.text(x, y_txt, base_norm_name, color="tab:purple", ha="center", va="bottom", fontsize=18)
-  if rr_is in by_rr:
-    x, y0, _y1 = by_rr[rr_is]
-    if y0 is not None and math.isfinite(y0):
-      plt.scatter([x], [y0], s=110, color="tab:orange", zorder=6, edgecolors="white", linewidths=0.8)
-      # Place label with a fixed screen-space offset so it stays near the point regardless of x-scale
-      plt.annotate(f"{base_norm_name}-IS", xy=(x, y0), xytext=(3, 3), textcoords='offset points',
-                   color="tab:orange", fontsize=18, ha="left", va="bottom")
+  highlights = {
+    204: ("tab:purple", "base"),
+    170: ("tab:orange", "IS"),
+    172: ("tab:green", "good-donor-trusting"),
+  }
+  for target_rr, (color, label) in highlights.items():
+    if target_rr in by_rr:
+      x, y0, _ = by_rr[target_rr]
+      if y0 is not None and math.isfinite(y0):
+        ax.scatter([x], [y0], s=110, color=color, zorder=6,
+                   edgecolors="white", linewidths=0.8)
+        ax.annotate(label, xy=(x, y0), xytext=(3, 3), textcoords='offset points',
+                    color=color, fontsize=16, ha="left", va="bottom")
 
-  plt.xlabel("self cooperation level", fontsize=18)
-  plt.ylabel("$b/c$", fontsize=18)
-  plt.xlim(xlim)
-  plt.yticks([1, 2, 3, 4], fontsize=16)
-  plt.xticks(fontsize=16)
+  ax.set_xlabel("self cooperation level", fontsize=18)
+  ax.set_ylabel("$b/c$", fontsize=18)
+  ax.set_xlim(xlim)
+  ax.set_ylim(1.0, ymax)
+  ax.grid(True, linestyle=":", alpha=0.4)
+  fig.tight_layout()
+  return fig, ax
 
-  # Set y-limits to include [1, ymax]
-  plt.ylim(1.0, ymax)
-  plt.tight_layout()
 
-  if out:
-    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
-    plt.savefig(out, dpi=150)
-    print(f"Saved: {out}")
-
-#%% Plotting (vertical bars using bc_min and bc_max)
-def plot_rr_bcs_bars(inp: str, out: Optional[str] = None, ymax: float = 4.0, xlim: Tup[float, float]=(0.48, 1.0), base_norm_name: str="L6"):
-  by_rr, meta = load_rr_bcs(inp)
-  if not by_rr:
-    raise SystemExit("No data points could be read from the input file.")
-
-  plt.figure(figsize=(6, 4))
-  ax = plt.gca()
+def plot_rr_bcs_bars(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
+                     ymax: float = 5.0,
+                     xlim: Tuple[float, float] = (0.5, 1.0)):
+  fig, ax = plt.subplots(figsize=(6, 4))
   ax.tick_params(axis='both', labelsize=16)
   ax.spines['top'].set_visible(False)
   ax.spines['right'].set_visible(False)
 
-  # Draw vertical bars from bc_min to bc_max (None => ymax)
-  for rr, (x, y0, y1) in by_rr.items():
-    if y0 is None or not math.isfinite(y0):
+  for rr, (self_coop, bc_min, bc_max) in by_rr.items():
+    if bc_min is None or not math.isfinite(bc_min):
       continue
-    y_top = ymax if (y1 is None or not math.isfinite(y1)) else y1
-    if y_top < y0:
+    y_top = ymax if (bc_max is None or not math.isfinite(bc_max)) else bc_max
+    if y_top < bc_min:
       continue
-    plt.vlines(x, y0, y_top, colors="tab:blue", alpha=0.5, linewidth=1.5)
+    ax.vlines(self_coop, bc_min, y_top, colors="tab:blue", alpha=0.5, linewidth=1.5)
 
-  # Highlight base and IS bars
-  rr_base = 204
-  rr_is = 170
-  if rr_base in by_rr:
-    x, y0, y1 = by_rr[rr_base]
-    if y0 is not None and math.isfinite(y0):
-      y_top = ymax if (y1 is None or not math.isfinite(y1)) else y1
-      if y_top >= y0:
-        plt.vlines(x, y0, y_top, colors="tab:purple", linewidth=3.0, zorder=5)
-        plt.annotate(base_norm_name, xy=(x, y0), xytext=(6, 6), textcoords='offset points',
-                     color="tab:purple", fontsize=18, ha="left", va="bottom")
+  highlights = {
+    204: ("tab:purple", "base"),
+    170: ("tab:orange", "-IS"),
+    172: ("tab:green", "good-donor-trusting"),
+  }
+  for target_rr, (color, label) in highlights.items():
+    if target_rr in by_rr:
+      x, bc_min, bc_max = by_rr[target_rr]
+      if bc_min is not None and math.isfinite(bc_min):
+        y_top = ymax if (bc_max is None or not math.isfinite(bc_max)) else bc_max
+        if y_top >= bc_min:
+          ax.vlines(x, bc_min, y_top, colors=color, linewidth=3.0, zorder=6)
+          ax.annotate(label, xy=(x, bc_min), xytext=(6, 6), textcoords='offset points',
+                      color=color, fontsize=16, ha="left", va="bottom")
 
-  if rr_is in by_rr:
-    x, y0, y1 = by_rr[rr_is]
-    if y0 is not None and math.isfinite(y0):
-      y_top = ymax if (y1 is None or not math.isfinite(y1)) else y1
-      if y_top >= y0:
-        plt.vlines(x, y0, y_top, colors="tab:orange", linewidth=3.5, zorder=6)
-        plt.annotate(f"{base_norm_name}-IS", xy=(x, y0), xytext=(8, 8), textcoords='offset points',
-                     color="tab:orange", fontsize=18, ha="left", va="bottom")
+  ax.set_xlabel("self cooperation level", fontsize=18)
+  ax.set_ylabel("$b/c$", fontsize=18)
+  ax.set_xlim(xlim)
+  ax.set_ylim(1.0, ymax)
+  ax.grid(True, linestyle=":", alpha=0.4)
+  fig.tight_layout()
+  return fig, ax
 
-  plt.xlabel("self cooperation level", fontsize=18)
-  plt.ylabel("$b/c$", fontsize=18)
-  plt.xlim(xlim)
-  plt.yticks([1, 2, 3, 4], fontsize=16)
-  plt.xticks(fontsize=16)
-  plt.ylim(1.0, ymax)
-  plt.tight_layout()
+#%% Interactive defaults
+IN_PATH = Path("../R2_sweep.tsv")  # adjust as needed
+YMAX = 5.0
+XLIM = (0.5, 1.0)
 
-  if out:
-    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
-    plt.savefig(out, dpi=150)
-    print(f"Saved: {out}")
+by_rr_data = None
+if IN_PATH.exists():
+  by_rr_data = load_rr_bcs(IN_PATH)
 
-#%% Interactive Defaults
-in_path = "../results_tables/rr_bcs_rd153_p10_20250920_170903.tsv"  # change as needed
-out_path = "../results_tables/rr_bcs_rd153_p10_20250920_170903.pdf"
-plot_rr_bcs(inp=in_path, out=out_path, ymax=4.0, xlim=(0.48, 1.0), base_norm_name="L6")
+if by_rr_data:
+  fig_points, ax_points = plot_rr_bcs_points(by_rr_data, ymax=YMAX, xlim=XLIM)
+  try:
+    display(fig_points)
+  except NameError:
+    pass
 
-# %%
-in_path = "../results_tables/rr_bcs_rd187_p10_20250920_221515.tsv"  # change as needed
-plot_rr_bcs_bars(inp=in_path, out=None, ymax=4.0, xlim=(0.940, 0.98), base_norm_name="L3")
-# %%
-in_path = "../results_tables/rr_bcs_rd187_p10_20250920_221515.tsv"  # change as needed
-out_path = "../results_tables/rr_bcs_rd187_p10_20250920_221515.pdf"
-# out_path = None
-plot_rr_bcs(inp=in_path, out=out_path, ymax=4.0, xlim=(0.7, 1.0), base_norm_name="L3")
+  fig_bars, ax_bars = plot_rr_bcs_bars(by_rr_data, ymax=YMAX, xlim=XLIM)
+  try:
+    display(fig_bars)
+  except NameError:
+    pass
+else:
+  print(f"No data loaded from {IN_PATH.resolve()}")
 
-# %%
-# find the data whose bc_min < 1.1 and sort by bc_max in descending order
-in_path = "../results_tables/rr_bcs_rd187_p10_20250920_221515.tsv"  # change as needed
-by_rr, meta = load_rr_bcs(in_path)
-filtered = [(rr, vals) for rr, vals in by_rr.items() if vals[1] < 1.1]
-sorted_filtered = sorted(filtered, key=lambda item: (item[1][2] if item[1][2] is not None else float('inf')), reverse=True)
-for rr, (self_coop, bc_min, bc_max) in sorted_filtered:
-  print(f"Rr={rr}: self_coop={self_coop:.4f}, bc_min={bc_min:.4f}, bc_max={bc_max}")
+#%% CLI entry point
 
-# %%
+def main():
+  parser = argparse.ArgumentParser(description="Plot self_coop vs bc range from main_SweepR2 TSV")
+  parser.add_argument("--in", dest="inp", required=True, help="Input TSV produced by main_SweepR2")
+  parser.add_argument("--out", dest="out", default=None, help="Output image path (PNG/SVG/PDF)")
+  parser.add_argument("--show", action="store_true", help="Show the plot window")
+  parser.add_argument("--ymax", dest="ymax", type=float, default=5.0, help="Y-axis upper limit (default: 5)")
+  args = parser.parse_args()
+
+  by_rr = load_rr_bcs(Path(args.inp))
+  if not by_rr:
+    raise SystemExit("No valid data rows found in input file.")
+
+  fig, _ = plot_rr_bcs_points(by_rr, ymax=args.ymax)
+
+  inp_path = Path(args.inp)
+  out_path = args.out
+  if not out_path and not args.show:
+    out_path = str(inp_path.with_name(inp_path.stem + "_bcs.png"))
+  if out_path:
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150)
+    print(f"Saved: {out_path}")
+
+  if args.show or not out_path:
+    plt.show()
+
+
+if __name__ == "__main__":
+  main()
