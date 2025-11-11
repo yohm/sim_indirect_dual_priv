@@ -50,5 +50,8 @@ target_link_libraries(inspect_PrivRepGame nlohmann_json::nlohmann_json)
 add_executable(inspect_EvolPrivRepGame inspect_EvolPrivRepGame.cpp EvolPrivRepGame.hpp PrivRepGame.hpp Norm.hpp)
 target_link_libraries(inspect_EvolPrivRepGame Eigen3::Eigen OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
 
+add_executable(main_RecoveryAnalysis main_RecoveryAnalysis.cpp Norm.hpp)
+target_link_libraries(main_RecoveryAnalysis nlohmann_json::nlohmann_json)
+
 add_executable(main_SweepR2 main_SweepR2.cpp EvolPrivRepGame.hpp PrivRepGame.hpp Norm.hpp)
 target_link_libraries(main_SweepR2 Eigen3::Eigen OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
