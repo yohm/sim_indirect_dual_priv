@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -151,8 +152,8 @@ int main(int argc, char *argv[]) {
 
   nlohmann::json default_params = {
     {"N", 50},
-    {"max_t", 100000},
-    {"num_samples", 50},
+    {"max_t", 10'000},
+    {"num_samples", 10'000},
     {"_seed", 123456789ull}
   };
 
@@ -203,9 +204,22 @@ int main(int argc, char *argv[]) {
       for (size_t t : successes) {
         sum += static_cast<double>(t);
       }
-      output["avg_recovery_time"] = sum / static_cast<double>(successes.size());
+      const double mean = sum / static_cast<double>(successes.size());
+      output["avg_recovery_time"] = mean;
+      if (successes.size() > 1) {
+        double variance = 0.0;
+        for (size_t t : successes) {
+          double diff = static_cast<double>(t) - mean;
+          variance += diff * diff;
+        }
+        variance /= static_cast<double>(successes.size() - 1);
+        output["std_err_recovery_time"] = std::sqrt(variance / static_cast<double>(successes.size()));
+      } else {
+        output["std_err_recovery_time"] = nullptr;
+      }
     } else {
       output["avg_recovery_time"] = nullptr;
+      output["std_err_recovery_time"] = nullptr;
     }
 
     std::cout << output.dump(2) << std::endl;
