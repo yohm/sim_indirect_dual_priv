@@ -3,6 +3,9 @@
 #include <fstream>
 #include <iostream>
 #include <optional>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include <queue>
 #include <random>
 #include <stdexcept>
@@ -186,6 +189,23 @@ int main(int argc, char *argv[]) {
     std::vector<size_t> successes;
     successes.reserve(parsed_params.num_samples);
 
+#if defined(_OPENMP)
+#pragma omp parallel
+    {
+      std::vector<size_t> local_successes;
+      local_successes.reserve(parsed_params.num_samples / omp_get_num_threads() + 1);
+#pragma omp for schedule(static)
+      for (size_t sample = 0; sample < parsed_params.num_samples; ++sample) {
+        uint64_t sample_seed = parsed_params.seed + sample * 7919ull;
+        auto recovery_time = RunRecoverySample(norm, parsed_params, sample_seed);
+        if (recovery_time) {
+          local_successes.push_back(*recovery_time);
+        }
+      }
+#pragma omp critical
+      successes.insert(successes.end(), local_successes.begin(), local_successes.end());
+    }
+#else
     for (size_t sample = 0; sample < parsed_params.num_samples; ++sample) {
       uint64_t sample_seed = parsed_params.seed + sample * 7919ull;
       auto recovery_time = RunRecoverySample(norm, parsed_params, sample_seed);
@@ -193,6 +213,7 @@ int main(int argc, char *argv[]) {
         successes.push_back(*recovery_time);
       }
     }
+#endif
 
     nlohmann::json output;
     output["num_samples"] = parsed_params.num_samples;
