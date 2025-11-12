@@ -55,3 +55,6 @@ target_link_libraries(main_RecoveryAnalysis OpenMP::OpenMP_CXX nlohmann_json::nl
 
 add_executable(main_SweepR2 main_SweepR2.cpp EvolPrivRepGame.hpp PrivRepGame.hpp Norm.hpp)
 target_link_libraries(main_SweepR2 Eigen3::Eigen OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
+
+add_executable(main_ExhaustiveSearch main_ExhaustiveSearch.cpp EvolPrivRepGame.hpp PrivRepGame.hpp Norm.hpp)
+target_link_libraries(main_ExhaustiveSearch Eigen3::Eigen OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
