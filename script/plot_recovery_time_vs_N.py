@@ -11,6 +11,7 @@ Example (from repo root, assuming cmake-build-release already built):
 """
 
 # %%
+import csv
 import json
 import os
 import subprocess
@@ -164,5 +165,127 @@ if SHOW_PLOT:
     plt.show()
 else:
     plt.close(fig)
+
+# %%
+# MULTI-NORM CONFIG (edit and re-run this cell)
+NORMS_TO_SWEEP = [f"L{i}-IS" for i in range(1, 9)] + ["L1v-IS", "L2v-IS"]
+MULTI_MIN_N = MIN_N
+MULTI_MAX_N = MAX_N
+MULTI_STEP = STEP
+MULTI_NUM_SAMPLES = NUM_SAMPLES
+MULTI_MAX_T = MAX_T
+MULTI_SEED = SEED
+MULTI_EXE_PATH = EXE_PATH
+MULTI_OUTPUT_PATH = None  # e.g., "figures/recovery_time_vs_N_multi.png"
+MULTI_RESULTS_PATH = "data/recovery_time_vs_N_multi.tsv"  # set to None to skip saving/loading
+MULTI_SHOW_PLOT = True
+
+
+# %%
+# MULTI-NORM SWEEP
+multi_norm_results = {}
+for norm in NORMS_TO_SWEEP:
+    multi_cfg = SweepConfig(
+        norm=norm,
+        min_N=MULTI_MIN_N,
+        max_N=MULTI_MAX_N,
+        step=MULTI_STEP,
+        num_samples=MULTI_NUM_SAMPLES,
+        max_t=MULTI_MAX_T,
+        seed=MULTI_SEED,
+        exe_path=MULTI_EXE_PATH,
+    )
+    (
+        norm_n_values,
+        norm_avg_arr,
+        norm_err_arr,
+        norm_recoveries,
+    ) = collect_recovery_stats(multi_cfg)
+    multi_norm_results[norm] = {
+        "N": norm_n_values,
+        "avg": norm_avg_arr,
+        "err": norm_err_arr,
+        "recoveries": norm_recoveries,
+    }
+
+# %%
+# MULTI-NORM SAVE RESULTS
+if MULTI_RESULTS_PATH and multi_norm_results:
+    out_dir = os.path.dirname(MULTI_RESULTS_PATH)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(MULTI_RESULTS_PATH, "w", newline="") as fp:
+        writer = csv.writer(fp, delimiter="\t")
+        writer.writerow(["norm", "N", "avg", "std_err", "num_recoveries"])
+        for norm, result in multi_norm_results.items():
+            for n, avg, err, rec in zip(
+                result["N"],
+                result["avg"],
+                result["err"],
+                result["recoveries"],
+            ):
+                writer.writerow([norm, int(n), float(avg), float(err), int(rec)])
+    print(f"[Info] Saved multi-norm sweep results to {MULTI_RESULTS_PATH}")
+
+# %%
+# MULTI-NORM LOAD RESULTS
+if MULTI_RESULTS_PATH and os.path.exists(MULTI_RESULTS_PATH):
+    multi_norm_results = {}
+    with open(MULTI_RESULTS_PATH, "r", newline="") as fp:
+        reader = csv.DictReader(fp, delimiter="\t")
+        for row in reader:
+            norm = row["norm"]
+            multi_norm_results.setdefault(norm, {"N": [], "avg": [], "err": [], "recoveries": []})
+            multi_norm_results[norm]["N"].append(int(row["N"]))
+            multi_norm_results[norm]["avg"].append(float(row["avg"]))
+            multi_norm_results[norm]["err"].append(float(row["std_err"]))
+            multi_norm_results[norm]["recoveries"].append(int(row["num_recoveries"]))
+    for norm, result in multi_norm_results.items():
+        result["avg"] = np.array(result["avg"], dtype=float)
+        result["err"] = np.array(result["err"], dtype=float)
+    print(f"[Info] Loaded multi-norm sweep results from {MULTI_RESULTS_PATH}")
+
+
+# %%
+# MULTI-NORM PLOT
+if not multi_norm_results:
+    raise RuntimeError("Run the multi-norm sweep cell first to populate results.")
+
+plt.clf()
+fig, ax = plt.subplots(figsize=(9, 5.5))
+for norm, result in multi_norm_results.items():
+    ax.errorbar(
+        result["N"],
+        result["avg"],
+        yerr=result["err"],
+        fmt="-o",
+        markersize=3,
+        capsize=2,
+        alpha=0.85,
+        label=norm,
+    )
+
+ax.set_xlabel("Population size N")
+ax.set_ylabel("Average recovery time")
+ax.set_title("Recovery time vs N for multiple norms")
+ax.legend(ncol=2)
+
+if MULTI_OUTPUT_PATH:
+    out_dir = os.path.dirname(MULTI_OUTPUT_PATH)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(MULTI_OUTPUT_PATH, dpi=200)
+    print(f"[Info] Multi-norm plot saved to {MULTI_OUTPUT_PATH}")
+
+if MULTI_SHOW_PLOT:
+    plt.show()
+else:
+    plt.close(fig)
+
+# %%
+for norm in NORMS_TO_SWEEP:
+    print(f"Norm: {norm}")
+    print(multi_norm_results[norm]['avg'][-1])
 
 # %%
