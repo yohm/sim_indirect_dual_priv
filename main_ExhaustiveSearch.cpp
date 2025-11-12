@@ -19,6 +19,7 @@
 
 struct ProgramOptions {
   nlohmann::json param_overrides = nlohmann::json::object();
+  size_t debug_limit = 0;
 };
 
 struct PackedRow {
@@ -34,6 +35,7 @@ void PrintUsage(const char* exe) {
   std::cerr << "Usage: " << exe << " [options]\n";
   std::cerr << "Options:\n";
   std::cerr << "  -j <json|path>      Simulation parameters (inline JSON or file path)\n";
+  std::cerr << "  --debug-limit <N>   Only evaluate the first N norms (fill rest with defaults)\n";
   std::cerr << "  --help              Show this message\n";
   std::cerr << "\nParameters JSON keys (optional):\n";
   std::cerr << "  N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, _seed\n";
@@ -62,6 +64,21 @@ ProgramOptions ParseArgs(int argc, char** argv) {
         throw std::runtime_error("-j requires a value");
       }
       opt.param_overrides = LoadJsonArg(argv[++i]);
+    }
+    else if (arg == "--debug-limit") {
+      if (i + 1 >= argc) {
+        throw std::runtime_error("--debug-limit requires a value");
+      }
+      const std::string value = argv[++i];
+      try {
+        opt.debug_limit = std::stoull(value);
+      }
+      catch (const std::exception&) {
+        throw std::runtime_error("invalid integer for --debug-limit: " + value);
+      }
+      if (opt.debug_limit == 0) {
+        throw std::runtime_error("--debug-limit must be > 0");
+      }
     }
     else {
       throw std::runtime_error("unknown option: " + arg);
@@ -188,9 +205,16 @@ int main(int argc, char** argv) {
     EvolPrivRepGame::Parameters params = BuildParameters(opt.param_overrides);
     auto norm_ids = Norm::Deterministic3rdOrderWithR2NormIDs();
     const size_t norm_count = norm_ids.size();
+    size_t active_count = norm_count;
+    if (opt.debug_limit > 0 && opt.debug_limit < norm_count) {
+      active_count = opt.debug_limit;
+    }
 
     if (world_rank == 0) {
       std::cerr << "Sweeping " << norm_count << " unique deterministic norms (up to B/G symmetry)\n";
+      if (active_count < norm_count) {
+        std::cerr << " Debug mode: only evaluating first " << active_count << " norms\n";
+      }
     }
 
     Norm alld = Norm::AllD();
@@ -202,27 +226,30 @@ int main(int argc, char** argv) {
       if (world_rank == 0 && idx % 128 == 0) {
         std::cerr << " progress: " << idx << " / " << norm_count << std::endl;
       }
-      size_t norm_id = norm_ids[idx];
-      Norm candidate = Norm::ConstructFromID(static_cast<int>(norm_id));
-      int rd_id = candidate.Rd.ID();
-      int rr_id = candidate.Rr.ID();
-      int act_id = candidate.P.ID();
-
-      EvolPrivRepGame::Parameters mono_params = params;
-      mono_params.seed += static_cast<uint64_t>(idx * 2);
-      double self_coop = EvolPrivRepGame::MonomorphicCooperationLevel(candidate, mono_params);
-
-      PrivateRepGame::population_t pop = {{candidate, params.N - 1}, {alld, 1}};
-      auto c_levels = RunPrivRepSimulation(pop, params, static_cast<uint64_t>(idx * 2 + 1));
-      auto bc_min = ComputeBcMin(c_levels);
-
       PackedRow packed;
       packed.idx = static_cast<uint64_t>(idx);
-      packed.rd = rd_id;
-      packed.rr = rr_id;
-      packed.act = act_id;
-      packed.self_coop = self_coop;
-      if (bc_min.has_value()) { packed.bc_min = bc_min.value(); }
+      if (idx < active_count) {
+        size_t norm_id = norm_ids[idx];
+        Norm candidate = Norm::ConstructFromID(static_cast<int>(norm_id));
+        packed.rd = candidate.Rd.ID();
+        packed.rr = candidate.Rr.ID();
+        packed.act = candidate.P.ID();
+
+        EvolPrivRepGame::Parameters mono_params = params;
+        mono_params.seed += static_cast<uint64_t>(idx * 2);
+        packed.self_coop = EvolPrivRepGame::MonomorphicCooperationLevel(candidate, mono_params);
+
+        PrivateRepGame::population_t pop = {{candidate, params.N - 1}, {alld, 1}};
+        auto c_levels = RunPrivRepSimulation(pop, params, static_cast<uint64_t>(idx * 2 + 1));
+        auto bc_min = ComputeBcMin(c_levels);
+        if (bc_min.has_value()) { packed.bc_min = bc_min.value(); }
+      } else {
+        packed.rd = -1;
+        packed.rr = -1;
+        packed.act = -1;
+        packed.self_coop = 0.0;
+        packed.bc_min = -1.0;
+      }
       local_rows.push_back(packed);
     }
 
