@@ -662,6 +662,18 @@ public:
     }
     return true;
   }
+  static std::vector<size_t> Deterministic3rdOrderWithR2NormIDs() {
+    std::vector<size_t> ids;
+    ids.reserve((1u << 19));  // half of total deterministic norms after symmetry removal
+    for (int i = 0; i < (1 << 20); i++) {
+      const Norm n = Norm::ConstructFromID(i);
+      const int swapped = n.SwapGB().ID();
+      if (n.ID() >= swapped) {
+        ids.push_back(static_cast<size_t>(n.ID()));
+      }
+    }
+    return ids;
+  }
   static std::vector<Norm> Deterministic3rdOrderWithoutR2Norms() {
     std::vector<Norm> norms;
     for (int i = 0; i < 4096; i++) {

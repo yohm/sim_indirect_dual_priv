@@ -15,46 +15,25 @@
 #include "PrivRepGame.hpp"
 #include "Norm.hpp"
 
-struct Range {
-  int start = 0;
-  int end = 0;
+struct ProgramOptions {
+  nlohmann::json param_overrides = nlohmann::json::object();
 };
 
-struct ProgramOptions {
-  Range rd{0, 255};
-  Range rr{0, 255};
-  Range act{0, 15};
-  nlohmann::json param_overrides = nlohmann::json::object();
+struct ResultRow {
+  int rd = 0;
+  int rr = 0;
+  int act = 0;
+  double self_coop = 0.0;
+  std::optional<double> bc_min;
 };
 
 void PrintUsage(const char* exe) {
   std::cerr << "Usage: " << exe << " [options]\n";
   std::cerr << "Options:\n";
   std::cerr << "  -j <json|path>      Simulation parameters (inline JSON or file path)\n";
-  std::cerr << "  --rd-range a b      Inclusive R1 (donor) ID range [0,255]\n";
-  std::cerr << "  --rr-range a b      Inclusive R2 (recipient) ID range [0,255]\n";
-  std::cerr << "  --act-range a b     Inclusive action rule ID range [0,15]\n";
   std::cerr << "  --help              Show this message\n";
   std::cerr << "\nParameters JSON keys (optional):\n";
   std::cerr << "  N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, seed, _seed\n";
-}
-
-int ParseBound(const std::string& value, const std::string& label) {
-  try {
-    return std::stoi(value);
-  } catch (const std::exception&) {
-    throw std::runtime_error("invalid integer for " + label + ": " + value);
-  }
-}
-
-void SetRange(Range& range, int start, int end, int min_value, int max_value, const std::string& label) {
-  if (start < min_value || start > max_value || end < min_value || end > max_value || start > end) {
-    std::ostringstream oss;
-    oss << "invalid " << label << " range [" << start << ", " << end << "]";
-    throw std::runtime_error(oss.str());
-  }
-  range.start = start;
-  range.end = end;
 }
 
 nlohmann::json LoadJsonArg(const std::string& raw) {
@@ -80,30 +59,6 @@ ProgramOptions ParseArgs(int argc, char** argv) {
         throw std::runtime_error("-j requires a value");
       }
       opt.param_overrides = LoadJsonArg(argv[++i]);
-    }
-    else if (arg == "--rd-range") {
-      if (i + 2 >= argc) {
-        throw std::runtime_error("--rd-range requires two integers");
-      }
-      int start = ParseBound(argv[++i], "--rd-range");
-      int end = ParseBound(argv[++i], "--rd-range");
-      SetRange(opt.rd, start, end, 0, 255, "R1");
-    }
-    else if (arg == "--rr-range") {
-      if (i + 2 >= argc) {
-        throw std::runtime_error("--rr-range requires two integers");
-      }
-      int start = ParseBound(argv[++i], "--rr-range");
-      int end = ParseBound(argv[++i], "--rr-range");
-      SetRange(opt.rr, start, end, 0, 255, "R2");
-    }
-    else if (arg == "--act-range") {
-      if (i + 2 >= argc) {
-        throw std::runtime_error("--act-range requires two integers");
-      }
-      int start = ParseBound(argv[++i], "--act-range");
-      int end = ParseBound(argv[++i], "--act-range");
-      SetRange(opt.act, start, end, 0, 15, "Action");
     }
     else {
       throw std::runtime_error("unknown option: " + arg);
@@ -146,15 +101,6 @@ EvolPrivRepGame::Parameters BuildParameters(const nlohmann::json& overrides) {
     throw std::runtime_error("t_measure must be > 0");
   }
   return params;
-}
-
-std::vector<int> ExpandRange(const Range& range) {
-  std::vector<int> ids;
-  ids.reserve(static_cast<size_t>(range.end - range.start + 1));
-  for (int id = range.start; id <= range.end; ++id) {
-    ids.push_back(id);
-  }
-  return ids;
 }
 
 std::vector<std::vector<double>> RunPrivRepSimulation(const PrivateRepGame::population_t& pop,
@@ -218,47 +164,44 @@ int main(int argc, char** argv) {
   try {
     ProgramOptions opt = ParseArgs(argc, argv);
     EvolPrivRepGame::Parameters params = BuildParameters(opt.param_overrides);
-    auto rd_ids = ExpandRange(opt.rd);
-    auto rr_ids = ExpandRange(opt.rr);
-    auto act_ids = ExpandRange(opt.act);
+    auto norm_ids = Norm::Deterministic3rdOrderWithR2NormIDs();
 
-    size_t total = static_cast<size_t>(rd_ids.size()) * rr_ids.size() * act_ids.size();
-    std::cerr << "Sweeping " << total << " combinations "
-              << "(R1: " << opt.rd.start << "-" << opt.rd.end
-              << ", R2: " << opt.rr.start << "-" << opt.rr.end
-              << ", Action: " << opt.act.start << "-" << opt.act.end << ")\n";
+    std::cerr << "Sweeping " << norm_ids.size() << " unique deterministic norms (up to B/G symmetry)\n";
 
     Norm alld = Norm::AllD();
+    std::vector<ResultRow> rows(norm_ids.size());
+
+    for (size_t idx = 0; idx < norm_ids.size(); ++idx) {
+      if (idx % 128 == 0) {
+        std::cerr << " progress: " << idx << " / " << norm_ids.size() << std::endl;
+      }
+      size_t norm_id = norm_ids[idx];
+      Norm candidate = Norm::ConstructFromID(static_cast<int>(norm_id));
+      int rd_id = candidate.Rd.ID();
+      int rr_id = candidate.Rr.ID();
+      int act_id = candidate.P.ID();
+
+      EvolPrivRepGame::Parameters mono_params = params;
+      mono_params.seed += static_cast<uint64_t>(idx * 2);
+      double self_coop = EvolPrivRepGame::MonomorphicCooperationLevel(candidate, mono_params);
+
+      PrivateRepGame::population_t pop = {{candidate, params.N - 1}, {alld, 1}};
+      auto c_levels = RunPrivRepSimulation(pop, params, static_cast<uint64_t>(idx * 2 + 1));
+      auto bc_min = ComputeBcMin(c_levels);
+
+      rows[idx] = {rd_id, rr_id, act_id, self_coop, bc_min};
+    }
+
     std::cout << "#R1\tR2\tAction\tSelfCoop\tbc_min(AllD)\n";
-
-    size_t combo_index = 0;
-    for (int rd_id : rd_ids) {
-      auto rd = AssessmentRule::MakeDeterministicRule(rd_id);
-      for (int rr_id : rr_ids) {
-        auto rr = AssessmentRule::MakeDeterministicRule(rr_id);
-        for (int act_id : act_ids) {
-          auto act = ActionRule::MakeDeterministicRule(act_id);
-          Norm candidate(rd, rr, act);
-
-          EvolPrivRepGame::Parameters mono_params = params;
-          mono_params.seed += static_cast<uint64_t>(combo_index * 2);
-          double self_coop = EvolPrivRepGame::MonomorphicCooperationLevel(candidate, mono_params);
-
-          PrivateRepGame::population_t pop = {{candidate, params.N - 1}, {alld, 1}};
-          auto c_levels = RunPrivRepSimulation(pop, params, static_cast<uint64_t>(combo_index * 2 + 1));
-          auto bc_min = ComputeBcMin(c_levels);
-
-          std::cout << rd_id << '\t'
-                    << rr_id << '\t'
-                    << act_id << '\t'
-                    << FormatDouble(self_coop) << '\t';
-          if (bc_min.has_value()) {
-            std::cout << FormatDouble(bc_min.value()) << '\n';
-          } else {
-            std::cout << "None\n";
-          }
-          ++combo_index;
-        }
+    for (const auto& row : rows) {
+      std::cout << row.rd << '\t'
+                << row.rr << '\t'
+                << row.act << '\t'
+                << FormatDouble(row.self_coop) << '\t';
+      if (row.bc_min.has_value()) {
+        std::cout << FormatDouble(row.bc_min.value()) << '\n';
+      } else {
+        std::cout << "None\n";
       }
     }
   }
