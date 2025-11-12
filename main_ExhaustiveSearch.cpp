@@ -228,13 +228,13 @@ int main(int argc, char** argv) {
       }
       PackedRow packed;
       packed.idx = static_cast<uint64_t>(idx);
-      if (idx < active_count) {
-        size_t norm_id = norm_ids[idx];
-        Norm candidate = Norm::ConstructFromID(static_cast<int>(norm_id));
-        packed.rd = candidate.Rd.ID();
-        packed.rr = candidate.Rr.ID();
-        packed.act = candidate.P.ID();
+      size_t norm_id = norm_ids[idx];
+      Norm candidate = Norm::ConstructFromID(static_cast<int>(norm_id));
+      packed.rd = candidate.Rd.ID();
+      packed.rr = candidate.Rr.ID();
+      packed.act = candidate.P.ID();
 
+      if (idx < active_count) {
         EvolPrivRepGame::Parameters mono_params = params;
         mono_params.seed += static_cast<uint64_t>(idx * 2);
         packed.self_coop = EvolPrivRepGame::MonomorphicCooperationLevel(candidate, mono_params);
@@ -244,9 +244,6 @@ int main(int argc, char** argv) {
         auto bc_min = ComputeBcMin(c_levels);
         if (bc_min.has_value()) { packed.bc_min = bc_min.value(); }
       } else {
-        packed.rd = -1;
-        packed.rr = -1;
-        packed.act = -1;
         packed.self_coop = 0.0;
         packed.bc_min = -1.0;
       }
@@ -314,11 +311,7 @@ int main(int argc, char** argv) {
                   << row.rr << '\t'
                   << row.act << '\t'
                   << FormatDouble(row.self_coop) << '\t';
-        if (row.bc_min > 0.0) {
-          std::cout << FormatDouble(row.bc_min) << '\n';
-        } else {
-          std::cout << "None\n";
-        }
+        std::cout << FormatDouble(row.bc_min) << '\n';
       }
     }
 
