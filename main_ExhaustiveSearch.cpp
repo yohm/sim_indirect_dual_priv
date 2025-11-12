@@ -33,7 +33,7 @@ void PrintUsage(const char* exe) {
   std::cerr << "  -j <json|path>      Simulation parameters (inline JSON or file path)\n";
   std::cerr << "  --help              Show this message\n";
   std::cerr << "\nParameters JSON keys (optional):\n";
-  std::cerr << "  N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, seed, _seed\n";
+  std::cerr << "  N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, _seed\n";
 }
 
 nlohmann::json LoadJsonArg(const std::string& raw) {
@@ -75,7 +75,7 @@ EvolPrivRepGame::Parameters BuildParameters(const nlohmann::json& overrides) {
     }
 
     const std::vector<std::string> allowed = {
-      "N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "seed", "_seed"
+      "N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "_seed"
     };
     for (auto it = overrides.begin(); it != overrides.end(); ++it) {
       if (std::find(allowed.begin(), allowed.end(), it.key()) == allowed.end()) {
@@ -91,7 +91,6 @@ EvolPrivRepGame::Parameters BuildParameters(const nlohmann::json& overrides) {
     if (overrides.contains("mu_percept")) { params.mu_percept = overrides.at("mu_percept").get<double>(); }
     if (overrides.contains("mu_assess1")) { params.mu_assess1 = overrides.at("mu_assess1").get<double>(); }
     if (overrides.contains("mu_assess2")) { params.mu_assess2 = overrides.at("mu_assess2").get<double>(); }
-    if (overrides.contains("seed")) { params.seed = overrides.at("seed").get<uint64_t>(); }
     if (overrides.contains("_seed")) { params.seed = overrides.at("_seed").get<uint64_t>(); }
   }
   if (params.N < 2) {
