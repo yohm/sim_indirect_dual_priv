@@ -1,8 +1,10 @@
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <mpi.h>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -19,12 +21,13 @@ struct ProgramOptions {
   nlohmann::json param_overrides = nlohmann::json::object();
 };
 
-struct ResultRow {
+struct PackedRow {
+  uint64_t idx = 0;
   int rd = 0;
   int rr = 0;
   int act = 0;
   double self_coop = 0.0;
-  std::optional<double> bc_min;
+  double bc_min = -1.0;
 };
 
 void PrintUsage(const char* exe) {
@@ -160,19 +163,44 @@ std::string FormatDouble(double value) {
 }
 
 int main(int argc, char** argv) {
+  ProgramOptions opt;
   try {
-    ProgramOptions opt = ParseArgs(argc, argv);
+    opt = ParseArgs(argc, argv);
+  }
+  catch (const std::exception& e) {
+    std::cerr << "[Error] " << e.what() << std::endl;
+    return 1;
+  }
+
+  int world_rank = 0;
+  int world_size = 1;
+  bool mpi_initialized = false;
+
+  try {
+    int rc = MPI_Init(&argc, &argv);
+    if (rc != MPI_SUCCESS) {
+      throw std::runtime_error("MPI_Init failed");
+    }
+    mpi_initialized = true;
+    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
     EvolPrivRepGame::Parameters params = BuildParameters(opt.param_overrides);
     auto norm_ids = Norm::Deterministic3rdOrderWithR2NormIDs();
+    const size_t norm_count = norm_ids.size();
 
-    std::cerr << "Sweeping " << norm_ids.size() << " unique deterministic norms (up to B/G symmetry)\n";
+    if (world_rank == 0) {
+      std::cerr << "Sweeping " << norm_count << " unique deterministic norms (up to B/G symmetry)\n";
+    }
 
     Norm alld = Norm::AllD();
-    std::vector<ResultRow> rows(norm_ids.size());
+    std::vector<PackedRow> local_rows;
+    size_t reserve = (norm_count + static_cast<size_t>(world_size) - 1) / static_cast<size_t>(world_size);
+    local_rows.reserve(reserve);
 
-    for (size_t idx = 0; idx < norm_ids.size(); ++idx) {
-      if (idx % 128 == 0) {
-        std::cerr << " progress: " << idx << " / " << norm_ids.size() << std::endl;
+    for (size_t idx = static_cast<size_t>(world_rank); idx < norm_count; idx += static_cast<size_t>(world_size)) {
+      if (world_rank == 0 && idx % 128 == 0) {
+        std::cerr << " progress: " << idx << " / " << norm_count << std::endl;
       }
       size_t norm_id = norm_ids[idx];
       Norm candidate = Norm::ConstructFromID(static_cast<int>(norm_id));
@@ -188,25 +216,96 @@ int main(int argc, char** argv) {
       auto c_levels = RunPrivRepSimulation(pop, params, static_cast<uint64_t>(idx * 2 + 1));
       auto bc_min = ComputeBcMin(c_levels);
 
-      rows[idx] = {rd_id, rr_id, act_id, self_coop, bc_min};
+      PackedRow packed;
+      packed.idx = static_cast<uint64_t>(idx);
+      packed.rd = rd_id;
+      packed.rr = rr_id;
+      packed.act = act_id;
+      packed.self_coop = self_coop;
+      if (bc_min.has_value()) { packed.bc_min = bc_min.value(); }
+      local_rows.push_back(packed);
     }
 
-    std::cout << "#R1\tR2\tAction\tSelfCoop\tbc_min(AllD)\n";
-    for (const auto& row : rows) {
-      std::cout << row.rd << '\t'
-                << row.rr << '\t'
-                << row.act << '\t'
-                << FormatDouble(row.self_coop) << '\t';
-      if (row.bc_min.has_value()) {
-        std::cout << FormatDouble(row.bc_min.value()) << '\n';
-      } else {
-        std::cout << "None\n";
+    int local_count = static_cast<int>(local_rows.size());
+    std::vector<int> recv_counts;
+    if (world_rank == 0) {
+      recv_counts.resize(world_size);
+    }
+
+    MPI_Gather(&local_count,
+               1,
+               MPI_INT,
+               world_rank == 0 ? recv_counts.data() : nullptr,
+               1,
+               MPI_INT,
+               0,
+               MPI_COMM_WORLD);
+
+    const int packed_size = static_cast<int>(sizeof(PackedRow));
+    std::vector<int> recv_counts_bytes;
+    std::vector<int> recv_displs;
+    std::vector<PackedRow> gathered_rows;
+
+    if (world_rank == 0) {
+      recv_counts_bytes.resize(world_size, 0);
+      recv_displs.resize(world_size, 0);
+      int byte_offset = 0;
+      for (int i = 0; i < world_size; ++i) {
+        recv_counts_bytes[i] = recv_counts[i] * packed_size;
+        recv_displs[i] = byte_offset;
+        byte_offset += recv_counts_bytes[i];
+      }
+      gathered_rows.resize(static_cast<size_t>(byte_offset / packed_size));
+    }
+
+    MPI_Gatherv(local_rows.empty() ? nullptr : local_rows.data(),
+                local_count * packed_size,
+                MPI_BYTE,
+                world_rank == 0 ? gathered_rows.data() : nullptr,
+                world_rank == 0 ? recv_counts_bytes.data() : nullptr,
+                world_rank == 0 ? recv_displs.data() : nullptr,
+                MPI_BYTE,
+                0,
+                MPI_COMM_WORLD);
+
+    if (world_rank == 0) {
+      if (gathered_rows.size() != norm_count) {
+        throw std::runtime_error("MPI gather produced inconsistent row count");
+      }
+
+      std::vector<PackedRow> rows(norm_count);
+      for (const auto& packed : gathered_rows) {
+        if (packed.idx >= norm_count) {
+          throw std::runtime_error("Received row with invalid index");
+        }
+        rows[static_cast<size_t>(packed.idx)] = packed;
+      }
+
+      std::cout << "#R1\tR2\tAction\tSelfCoop\tbc_min(AllD)\n";
+      for (const auto& row : rows) {
+        std::cout << row.rd << '\t'
+                  << row.rr << '\t'
+                  << row.act << '\t'
+                  << FormatDouble(row.self_coop) << '\t';
+        if (row.bc_min > 0.0) {
+          std::cout << FormatDouble(row.bc_min) << '\n';
+        } else {
+          std::cout << "None\n";
+        }
       }
     }
+
+    MPI_Finalize();
+    mpi_initialized = false;
+    return 0;
   }
   catch (const std::exception& e) {
-    std::cerr << "[Error] " << e.what() << std::endl;
+    if (mpi_initialized) {
+      std::cerr << "[Rank " << world_rank << " Error] " << e.what() << std::endl;
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    } else {
+      std::cerr << "[Error] " << e.what() << std::endl;
+    }
     return 1;
   }
-  return 0;
 }

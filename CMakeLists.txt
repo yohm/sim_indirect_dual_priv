@@ -9,6 +9,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 find_package(OpenMP REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(MPI REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/icecream-cpp)
 
 # See http://google.github.io/googletest/quickstart-cmake.html
@@ -57,4 +58,4 @@ add_executable(main_SweepR2 main_SweepR2.cpp EvolPrivRepGame.hpp PrivRepGame.hpp
 target_link_libraries(main_SweepR2 Eigen3::Eigen OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
 
 add_executable(main_ExhaustiveSearch main_ExhaustiveSearch.cpp EvolPrivRepGame.hpp PrivRepGame.hpp Norm.hpp)
-target_link_libraries(main_ExhaustiveSearch Eigen3::Eigen OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json)
+target_link_libraries(main_ExhaustiveSearch Eigen3::Eigen OpenMP::OpenMP_CXX nlohmann_json::nlohmann_json MPI::MPI_CXX)
