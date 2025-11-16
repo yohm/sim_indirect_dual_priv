@@ -165,8 +165,8 @@ std::optional<double> ComputeBcMin(const std::vector<std::vector<double>>& c_lev
     }
     return std::nullopt;
   }
-  else {
-    if (p_rr > p_mr) {
+  else {  // p_rr = p_rm. pi_r > 0 <=> p_rr - p_mr < 0
+    if (p_rr < p_mr) {
       return 1.0;
     }
     return std::nullopt;
