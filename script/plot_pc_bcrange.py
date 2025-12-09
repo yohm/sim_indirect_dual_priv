@@ -8,7 +8,6 @@ Creates two separate plots:
   2) Vertical range bars [bc_min, bc_max]
 
 Usage:
-  CLI: python script/plot_pc_bcmin.py L3 L6 --N 50 --q 0.9
   VSCode Interactive: Run cells sequentially, edit parameters in cell 4
 """
 
@@ -65,6 +64,7 @@ def get_bc_range(norm: str, params: dict, N: int, mutant_size: int = 1) -> Tuple
 
     # Invasion vs AllD (lower bound)
     print(f"[INFO] Running invasion analysis for {norm} vs AllD (N={resident_size}+{mutant_size})...")
+    print(f"[INFO] command: {PRG_EXE} -j '{json_params}' {norm} {resident_size} AllD {mutant_size}")
     result_alld = run_simulation(PRG_EXE, ["-j", json_params, norm, str(resident_size), "AllD", str(mutant_size)])
     bc_min_alld = None
     bc_max_alld = None
@@ -75,6 +75,7 @@ def get_bc_range(norm: str, params: dict, N: int, mutant_size: int = 1) -> Tuple
 
     # Invasion vs AllC (upper bound)
     print(f"[INFO] Running invasion analysis for {norm} vs AllC (N={resident_size}+{mutant_size})...")
+    print(f"[INFO] command: {PRG_EXE} -j '{json_params}' {norm} {resident_size} AllC {mutant_size}")
     result_allc = run_simulation(PRG_EXE, ["-j", json_params, norm, str(resident_size), "AllC", str(mutant_size)])
     bc_min_allc = None
     bc_max_allc = None
@@ -96,7 +97,8 @@ def _style_axes(ax, remove_top_right=True):
     if remove_top_right:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-    ax.tick_params(axis='both', labelsize=14)
+    ax.tick_params(axis='y', labelsize=16)
+    ax.tick_params(axis='x', labelsize=24)
 
 
 def plot_cooperation_level(norm1: str, norm2: str,
@@ -110,20 +112,13 @@ def plot_cooperation_level(norm1: str, norm2: str,
           val2 if val2 is not None else 0.0]
 
     ax.bar(xs, ys, color=colors, alpha=0.9)
-    ax.set_xticks(xs, [norm1, norm2])
+    ax.set_xticks(xs)
+    ax.set_xticklabels([norm1, norm2])
     ax.set_ylim(0.0, 1.0)
-    ax.set_ylabel("Self cooperation level", fontsize=18)
-    ax.set_title(f"Self Cooperation: {norm1} vs {norm2}", fontsize=16)
-
-    for x, y in zip(xs, ys):
-        if y is not None:
-            ax.text(x, min(1.0 - 0.02, y + 0.02), f"{y:.3f}",
-                   ha='center', va='bottom', fontsize=12)
+    ax.set_ylabel("self cooperation level", fontsize=24)
 
     _style_axes(ax)
-    plt.tight_layout()
-    plt.show()
-
+    return fig, ax
 
 def plot_bc_range(norm1: str, norm2: str,
                   range1: Tuple[Optional[float], Optional[float]],
@@ -138,8 +133,8 @@ def plot_bc_range(norm1: str, norm2: str,
 
     for bc in (range1, range2):
         y0, y1 = bc
-        y0p = 1.0 if y0 is None else max(1.0, y0)
-        y1p = 4.0 if y1 is None else min(4.0, y1)
+        y0p = 100.0 if y0 is None else max(1.0, y0)  # treat None as infinite
+        y1p = 100.0 if y1 is None else min(4.0, y1)
         bottoms.append(y0p)
         tops.append(y1p)
 
@@ -154,23 +149,49 @@ def plot_bc_range(norm1: str, norm2: str,
             if y1_orig is not None and y1_orig <= 4.0:
                 ax.scatter([x], [y1p], s=24, color=c, edgecolors='white', zorder=3)
 
-    ax.set_xticks(xs, [norm1, norm2])
+    ax.set_xticks(xs)
+    ax.set_xticklabels([norm1, norm2])
     ax.set_xlim(-0.5, 1.5)
     ax.set_ylim(1.0, 4.0)
     ax.set_yticks([1, 2, 3, 4])
-    ax.set_ylabel("$b/c$ range", fontsize=18)
-    ax.set_title(f"Stable b/c Range: {norm1} vs {norm2}", fontsize=16)
+    ax.set_ylabel("$b/c$", fontsize=24)
+    # ax.set_title(f"Stable b/c Range: {norm1} vs {norm2}", fontsize=16)
 
     _style_axes(ax)
-    plt.tight_layout()
-    plt.show()
+    return fig, ax
 
 
-#%% Interactive parameters (EDIT HERE for VSCode interactive mode)
-# Norms to compare
-NORM1 = "L3"
-NORM2 = "L6"
+# %%
+def run_compare(norm1: str, norm2: str, params: dict):
+    print(f"\n[INFO] Comparing {norm1} vs {norm2} with parameters: {params}\n")
+    print(f"[INFO] Parameters: {params}")
+    print(f"[INFO] t_init={params['t_init']}, t_measure={params['t_measure']}\n")
 
+    # Build params dict for C++ executable (exclude N and mutant_size)
+    sim_params = {k: v for k, v in params.items() if k not in ["N", "mutant_size"]}
+
+    # Get self cooperation levels
+    coop1 = get_self_cooperation(norm1, sim_params, params["N"])
+    coop2 = get_self_cooperation(norm2, sim_params, params["N"])
+    # Get b/c ranges
+    bc_range1 = get_bc_range(norm1, sim_params, params["N"], params["mutant_size"])
+    bc_range2 = get_bc_range(norm2, sim_params, params["N"], params["mutant_size"])
+
+    # Print results
+    print(f"\n[RESULTS]")
+    coop1_str = f"{coop1:.3f}" if coop1 is not None else "N/A"
+    bc1_min_str = f"{bc_range1[0]:.3f}" if bc_range1[0] is not None else "N/A"
+    bc1_max_str = f"{bc_range1[1]:.3f}" if bc_range1[1] is not None else "N/A"
+    print(f"  {norm1}: cooperation = {coop1_str}, b/c range = [{bc1_min_str}, {bc1_max_str}]")
+
+    coop2_str = f"{coop2:.3f}" if coop2 is not None else "N/A"
+    bc2_min_str = f"{bc_range2[0]:.3f}" if bc_range2[0] is not None else "N/A"
+    bc2_max_str = f"{bc_range2[1]:.3f}" if bc_range2[1] is not None else "N/A"
+    print(f"  {norm2}: cooperation = {coop2_str}, b/c range = [{bc2_min_str}, {bc2_max_str}]\n")
+
+    return coop1, coop2, bc_range1, bc_range2
+
+# %%
 # Simulation parameters
 PARAMS = {
     "N": 50,                # Population size
@@ -185,44 +206,24 @@ PARAMS = {
     "mutant_size": 1,       # Mutant size for invasion analysis
 }
 
-#%% Run simulations and get results
-print(f"\n[INFO] Comparing {NORM1} vs {NORM2}")
-print(f"[INFO] Parameters: N={PARAMS['N']}, q={PARAMS['q']}, mu_assess1={PARAMS['mu_assess1']}")
-print(f"[INFO] t_init={PARAMS['t_init']}, t_measure={PARAMS['t_measure']}\n")
-
-# Build params dict for C++ executable (exclude N and mutant_size)
-sim_params = {k: v for k, v in PARAMS.items() if k not in ["N", "mutant_size"]}
-
-# Get self cooperation levels
-coop1 = get_self_cooperation(NORM1, sim_params, PARAMS["N"])
-coop2 = get_self_cooperation(NORM2, sim_params, PARAMS["N"])
-
-# Get b/c ranges
-bc_range1 = get_bc_range(NORM1, sim_params, PARAMS["N"], PARAMS["mutant_size"])
-bc_range2 = get_bc_range(NORM2, sim_params, PARAMS["N"], PARAMS["mutant_size"])
-
-# Print results
-print(f"\n[RESULTS]")
-coop1_str = f"{coop1:.3f}" if coop1 is not None else "N/A"
-bc1_min_str = f"{bc_range1[0]:.3f}" if bc_range1[0] is not None else "N/A"
-bc1_max_str = f"{bc_range1[1]:.3f}" if bc_range1[1] is not None else "N/A"
-print(f"  {NORM1}: cooperation = {coop1_str}, b/c range = [{bc1_min_str}, {bc1_max_str}]")
-
-coop2_str = f"{coop2:.3f}" if coop2 is not None else "N/A"
-bc2_min_str = f"{bc_range2[0]:.3f}" if bc_range2[0] is not None else "N/A"
-bc2_max_str = f"{bc_range2[1]:.3f}" if bc_range2[1] is not None else "N/A"
-print(f"  {NORM2}: cooperation = {coop2_str}, b/c range = [{bc2_min_str}, {bc2_max_str}]\n")
+# Norms to compare (EDIT HERE)
+norm1 = "L3"
+norm2 = "L3-IS"
+# Run comparison
+coop1, coop2, bc_range1, bc_range2 = run_compare(norm1, norm2, PARAMS)
 
 #%% Plot 1: Self cooperation level
 print(f"[INFO] Creating self cooperation level plot...")
-plot_cooperation_level(NORM1, NORM2, coop1, coop2)
+fig, ax = plot_cooperation_level(norm1, norm2, coop1, coop2)
+fig.tight_layout()
+fig.savefig(f"pc_{norm1}_vs_{norm2}.pdf", dpi=300)
+
 
 #%% Plot 2: b/c range
 print(f"[INFO] Creating b/c range plot...")
-plot_bc_range(NORM1, NORM2, bc_range1, bc_range2)
-
-print(f"[INFO] Done!")
-
+fig,ax = plot_bc_range(norm1, norm2, bc_range1, bc_range2)
+fig.tight_layout()
+fig.savefig(f"bc_range_{norm1}_vs_{norm2}.pdf", dpi=300)
 
 
 # %%
