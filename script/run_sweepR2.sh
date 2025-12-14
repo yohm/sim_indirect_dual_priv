@@ -4,22 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-TSV_PATH="R2_sweep.tsv"
-if [ "$#" -ne 1 ]; then
-  echo "Usage: $0 <params.json or inline JSON>" >&2
-  exit 1
-fi
+# Run for L1 to L8
+for norm in L1 L1v L2 L2v L3 L4 L5 L6 L7 L8; do
+  echo "[INFO] Running SweepR2 for ${norm}..."
+  "$REPO_ROOT/cmake-build-release/main_SweepR2" \
+    --params '{"N":50,"base_norm":"'${norm}'","mu_assess1":0.02,"mu_assess2":0.02,"mu_impl":0.02,"t_init":5000,"t_measure":5000}' \
+    --out "output/R2_sweep_${norm}.tsv"
+  echo "[INFO] Completed ${norm}"
+done
 
-JSON_ARG="$1"
-BCS_PNG="rr_bcs.png"
-SWEEP_PNG="rr_sweep.png"
-
-"$REPO_ROOT/cmake-build-release/main_SweepR2" --params "$JSON_ARG" --out "$TSV_PATH"
-
-UV_PYTHON_DIR="$SCRIPT_DIR/.venv"
-uv venv "$UV_PYTHON_DIR"
-uv pip install --python "$UV_PYTHON_DIR/bin/python" -r "$SCRIPT_DIR/requirements.txt"
-source "$UV_PYTHON_DIR/bin/activate"
-
-python "$SCRIPT_DIR/plot_rr_sweep_bcs.py" --in "$TSV_PATH" --out "$BCS_PNG"
-python "$SCRIPT_DIR/plot_rr_sweep.py" --in "$TSV_PATH" --out "$SWEEP_PNG"
+echo "[INFO] All SweepR2 runs completed successfully"

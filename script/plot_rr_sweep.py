@@ -1,5 +1,5 @@
-#%%
 #!/usr/bin/env python3
+#%%
 """
 Plot results from main_SweepR2.cpp sweeps.
 
@@ -7,24 +7,12 @@ Reads the TSV written by main_SweepR2 and visualises
   x-axis: self_coop (column 2)
   y-axis: eq0        (column 6)
 
-VS Code Interactive tips:
-  - This file uses '#%%' cells for convenient interactive execution.
-  - Edit IN_PATH in the "Interactive defaults" cell and run the
-    "Quick plot" cell; it will automatically display the figure if
-    data was loaded.
-
-CLI usage:
-  python script/plot_rr_sweep.py --in R2_sweep.tsv --out figures/rr_sweep.png
-
-Options:
-  --out   Optional path for the saved figure.
-  --show  Display the plot window (or automatically when no --out).
+Usage:
+  VSCode Interactive: Run cells sequentially, edit norm in the parameter cell
 """
 
-#%% Imports
-import argparse
+#%% Imports and setup
 import csv
-import os
 from pathlib import Path
 from typing import List, Tuple
 
@@ -80,48 +68,70 @@ def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int]):
   fig.tight_layout()
   return fig, ax
 
-#%% Interactive defaults
-IN_PATH = Path("../R2_sweep.tsv")  # adjust as needed
-xs, ys, rrs = [], [], []
-if IN_PATH.exists():
-  xs, ys, rrs = load_rr_sweep(IN_PATH)
+#%% Parameters
+# Edit the norm to plot
+norm = "L6"  # L1, L2, L3, L4, L5, L6, L7, L8
 
-fig = ax = None
-if xs:
-  fig, ax = plot_rr_sweep(xs, ys, rrs)
-  try:
-    display(fig)
-  except NameError:
-    pass
+save_figure = True
+show_figure = True
+output_format = "pdf"  # "png", "pdf", or "svg"
+
+
+#%% Load data and plot
+input_path = Path(f"output/R2_sweep_{norm}.tsv")
+
+if not input_path.exists():
+  print(f"[ERROR] File not found: {input_path}")
 else:
-  print(f"No data loaded from {IN_PATH.resolve()}")
-
-#%% CLI entry point
-
-def main():
-  parser = argparse.ArgumentParser(description="Plot self_coop vs eq0 from main_SweepR2 TSV")
-  parser.add_argument("--in", dest="inp", required=True, help="Input TSV produced by main_SweepR2")
-  parser.add_argument("--out", dest="out", default=None, help="Output image path (PNG/SVG/PDF)")
-  parser.add_argument("--show", action="store_true", help="Show the plot window")
-  args = parser.parse_args()
-
-  xs, ys, rrs = load_rr_sweep(Path(args.inp))
+  xs, ys, rrs = load_rr_sweep(input_path)
+  
   if not xs:
-    raise SystemExit("No valid data rows found in input file.")
+    print(f"[ERROR] No valid data rows found in {input_path}")
+  else:
+    print(f"[INFO] Loaded {len(xs)} data points from {input_path}")
+    
+    fig, ax = plot_rr_sweep(xs, ys, rrs)
+    
+    if save_figure:
+      Path("figures").mkdir(exist_ok=True)
+      output_path = Path(f"figures/rr_sweep_{norm}.{output_format}")
+      fig.savefig(output_path, dpi=150)
+      print(f"[INFO] Saved: {output_path}")
+    
+    if show_figure:
+      plt.show()
+    else:
+      plt.close(fig)
 
-  fig, _ = plot_rr_sweep(xs, ys, rrs)
 
-  out_path = args.out
-  if not out_path and not args.show:
-    out_path = str(Path(args.inp).with_suffix(".png"))
-  if out_path:
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150)
-    print(f"Saved: {out_path}")
+#%%
+# Plot all norms
+for norm in ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"]:
+  input_path = Path(f"output/R2_sweep_{norm}.tsv")
+  
+  if not input_path.exists():
+    print(f"[WARNING] File not found: {input_path}, skipping")
+    continue
+  
+  xs, ys, rrs = load_rr_sweep(input_path)
+  
+  if not xs:
+    print(f"[WARNING] No valid data for {norm}, skipping")
+    continue
+  
+  print(f"[INFO] Processing {norm}: {len(xs)} data points")
+  
+  fig, ax = plot_rr_sweep(xs, ys, rrs)
+  ax.set_title(f"Rr sweep ({norm})")
+  
+  if save_figure:
+    Path("figures").mkdir(exist_ok=True)
+    output_path = Path(f"figures/rr_sweep_{norm}.{output_format}")
+    fig.savefig(output_path, dpi=150)
+    print(f"[INFO] Saved: {output_path}")
+  
+  plt.close(fig)
 
-  if args.show or not out_path:
-    plt.show()
+print("[INFO] All plots completed")
 
-
-if __name__ == "__main__":
-  main()
+# %%
