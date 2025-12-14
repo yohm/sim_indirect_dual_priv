@@ -111,13 +111,21 @@ def plot_cooperation_level(norm1: str, norm2: str,
     ys = [val1 if val1 is not None else 0.0,
           val2 if val2 is not None else 0.0]
 
-    ax.bar(xs, ys, color=colors, alpha=0.9)
+    bar_width = 0.6
+    ax.bar(xs, ys, width=bar_width, color=colors, alpha=0.9)
+    
+    # Display values on top of bars (2 decimal places)
+    for x, y in zip(xs, ys):
+        ax.text(x, y, f'{y:.2f}', ha='center', va='bottom', fontsize=16)
+    
     ax.set_xticks(xs)
     ax.set_xticklabels([norm1, norm2])
+    ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(0.0, 1.0)
     ax.set_ylabel("self cooperation level", fontsize=24)
 
     _style_axes(ax)
+    fig.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.13)
     return fig, ax
 
 def plot_bc_range(norm1: str, norm2: str,
@@ -142,7 +150,7 @@ def plot_bc_range(norm1: str, norm2: str,
     for x, orig_bc, y0p, y1p, c in zip(xs, (range1, range2), bottoms, tops, colors):
         if y1p >= y0p:
             ax.bar(x, y1p - y0p, bottom=y0p, width=bar_width,
-                  color=c, alpha=0.6, align='center', edgecolor='none')
+                  color=c, alpha=0.9, align='center', edgecolor='none')
             # Add boundary markers
             ax.scatter([x], [y0p], s=24, color=c, edgecolors='white', zorder=3)
             _, y1_orig = orig_bc
@@ -151,13 +159,14 @@ def plot_bc_range(norm1: str, norm2: str,
 
     ax.set_xticks(xs)
     ax.set_xticklabels([norm1, norm2])
-    ax.set_xlim(-0.5, 1.5)
+    ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(1.0, 4.0)
     ax.set_yticks([1, 2, 3, 4])
     ax.set_ylabel("$b/c$", fontsize=24)
     # ax.set_title(f"Stable b/c Range: {norm1} vs {norm2}", fontsize=16)
 
     _style_axes(ax)
+    fig.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.13)
     return fig, ax
 
 
@@ -215,15 +224,44 @@ coop1, coop2, bc_range1, bc_range2 = run_compare(norm1, norm2, PARAMS)
 #%% Plot 1: Self cooperation level
 print(f"[INFO] Creating self cooperation level plot...")
 fig, ax = plot_cooperation_level(norm1, norm2, coop1, coop2)
-fig.tight_layout()
-fig.savefig(f"pc_{norm1}_vs_{norm2}.pdf", dpi=300)
+fig.savefig(f"pc_{norm1}_vs_{norm2}.pdf")
 
 
 #%% Plot 2: b/c range
 print(f"[INFO] Creating b/c range plot...")
 fig,ax = plot_bc_range(norm1, norm2, bc_range1, bc_range2)
-fig.tight_layout()
-fig.savefig(f"bc_range_{norm1}_vs_{norm2}.pdf", dpi=300)
+fig.savefig(f"bc_range_{norm1}_vs_{norm2}.pdf")
 
+# %%
+def run_and_plot_all(norm1: str, norm2: str, params: dict, fig: plt.Figure = plt.figure()):
+    coop1, coop2, bc_range1, bc_range2 = run_compare(norm1, norm2, params)
 
+    fig.clf()
+    print(f"[INFO] Creating self cooperation level plot...")
+    fig, ax = plot_cooperation_level(norm1, norm2, coop1, coop2)
+    fig.savefig(f"pc_{norm1}_vs_{norm2}.pdf")
+
+    fig.clf()
+    print(f"[INFO] Creating b/c range plot...")
+    fig,ax = plot_bc_range(norm1, norm2, bc_range1, bc_range2)
+    fig.savefig(f"bc_range_{norm1}_vs_{norm2}.pdf")
+
+# %%
+run_and_plot_all("L1", "L1-IS", PARAMS)
+# %%
+run_and_plot_all("L1v", "L1v-IS", PARAMS)
+# %%
+run_and_plot_all("L2", "L2-IS", PARAMS)
+# %%
+run_and_plot_all("L2v", "L2v-IS", PARAMS)
+# %%
+run_and_plot_all("L4", "L4-IS", PARAMS)
+# %%
+run_and_plot_all("L5", "L5-IS", PARAMS)
+# %%
+run_and_plot_all("L6", "L6-IS", PARAMS)
+# %%
+run_and_plot_all("L7", "L7-IS", PARAMS)
+# %%
+run_and_plot_all("L8", "L8-IS", PARAMS)
 # %%
