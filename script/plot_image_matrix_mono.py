@@ -135,7 +135,7 @@ CPP_PARAMS = {
     "mu_percept": 0.0,
     "mu_assess1": 0.02,
     "mu_assess2": 0.02,
-    "seed": 123456789,
+    "seed": 12345678,
 }
 
 N = 50
