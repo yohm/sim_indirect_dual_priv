@@ -167,7 +167,10 @@ else:
 
 # %%
 # Run for multiple norms (using C++ implementation)
-for focal_nm in ["L3", "L3-IS", "L5", "L5-IS"]:
+for focal_nm in ["L1", "L1-IS", "L2", "L2-IS",
+                 "L3", "L3-IS", "L4", "L4-IS",
+                 "L5", "L5-IS", "L6", "L6-IS",
+                 "L7", "L7-IS", "L8", "L8-IS"]:
     MEnd = run_cpp_simulation(PRG_EXE, focal_nm, N, CPP_PARAMS)
     
     if MEnd is None:

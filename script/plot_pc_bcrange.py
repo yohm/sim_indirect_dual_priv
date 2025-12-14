@@ -222,15 +222,18 @@ norm2 = "L3-IS"
 coop1, coop2, bc_range1, bc_range2 = run_compare(norm1, norm2, PARAMS)
 
 #%% Plot 1: Self cooperation level
+from pathlib import Path
+Path("figures").mkdir(exist_ok=True)
+
 print(f"[INFO] Creating self cooperation level plot...")
 fig, ax = plot_cooperation_level(norm1, norm2, coop1, coop2)
-fig.savefig(f"pc_{norm1}_vs_{norm2}.pdf")
+fig.savefig(f"figures/pc_{norm1}_vs_{norm2}.pdf")
 
 
 #%% Plot 2: b/c range
 print(f"[INFO] Creating b/c range plot...")
 fig,ax = plot_bc_range(norm1, norm2, bc_range1, bc_range2)
-fig.savefig(f"bc_range_{norm1}_vs_{norm2}.pdf")
+fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
 
 # %%
 def run_and_plot_all(norm1: str, norm2: str, params: dict, fig: plt.Figure = plt.figure()):
@@ -239,12 +242,12 @@ def run_and_plot_all(norm1: str, norm2: str, params: dict, fig: plt.Figure = plt
     fig.clf()
     print(f"[INFO] Creating self cooperation level plot...")
     fig, ax = plot_cooperation_level(norm1, norm2, coop1, coop2)
-    fig.savefig(f"pc_{norm1}_vs_{norm2}.pdf")
+    fig.savefig(f"figures/pc_{norm1}_vs_{norm2}.pdf")
 
     fig.clf()
     print(f"[INFO] Creating b/c range plot...")
     fig,ax = plot_bc_range(norm1, norm2, bc_range1, bc_range2)
-    fig.savefig(f"bc_range_{norm1}_vs_{norm2}.pdf")
+    fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
 
 # %%
 run_and_plot_all("L1", "L1-IS", PARAMS)
