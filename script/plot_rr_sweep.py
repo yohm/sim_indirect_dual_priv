@@ -45,27 +45,40 @@ def load_rr_sweep(path: Path) -> Tuple[List[float], List[float], List[int]]:
 
 #%% Plotting helper
 
-def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int]):
-  fig, ax = plt.subplots(figsize=(6, 4))
-  ax.scatter(xs, ys, s=18, alpha=0.7, edgecolors="none", label="Rr sweep")
+def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int], norm: str = "", show_legend: bool = True):
+  fig, ax = plt.subplots(figsize=(6, 5))
+  ax.scatter(xs, ys, s=18, alpha=0.7, edgecolors="none")
 
   highlights = [
-    (204, "red", "*", "Rr=204 (base)"),
-    (170, "blue", "x", "Rr=170 (IS)"),
-    (172, "green", "^", "Rr=172 (good-donor-trusting)")
+    (172, "green", "^", "good-donor-trusting"), # "Rr=172 (good-donor-trusting)")
+    (170, "darkorange", "D", "IS"), # "Rr=170 (IS)"), changed to dark orange diamond for visibility
+    (204, "red", "*", "base") # "Rr=204 (base)")
   ]
   for target, color, marker, label in highlights:
     idxs = [i for i, rr in enumerate(rrs) if rr == target]
     if idxs:
-      ax.scatter([xs[i] for i in idxs], [ys[i] for i in idxs], s=64,
+      ax.scatter([xs[i] for i in idxs], [ys[i] for i in idxs], s=150,
                  color=color, marker=marker, label=label)
 
-  ax.set_xlabel("self_coop")
-  ax.set_ylabel("eq0")
+  ax.set_xlabel("self cooperation level", fontsize=24)
+  ax.set_ylabel("equilibrium fraction", fontsize=24)
+  ax.tick_params(axis='both', labelsize=16)
   ax.grid(True, linestyle=":", alpha=0.5)
-  ax.legend(frameon=False)
-  ax.set_title("Rr sweep (main_SweepR2)")
-  fig.tight_layout()
+  
+  # Reverse legend order so base appears first
+  if show_legend:
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=12)
+  
+  # Set title if norm is provided
+  if norm:
+    ax.set_title(norm, fontsize=24)
+  
+  # Remove top and right spines
+  ax.spines['top'].set_visible(False)
+  ax.spines['right'].set_visible(False)
+  
+  fig.subplots_adjust(left=0.18, right=0.97, top=0.91, bottom=0.13)
   return fig, ax
 
 #%% Parameters
@@ -74,7 +87,6 @@ norm = "L6"  # L1, L2, L3, L4, L5, L6, L7, L8
 
 save_figure = True
 show_figure = True
-output_format = "pdf"  # "png", "pdf", or "svg"
 
 
 #%% Load data and plot
@@ -90,12 +102,12 @@ else:
   else:
     print(f"[INFO] Loaded {len(xs)} data points from {input_path}")
     
-    fig, ax = plot_rr_sweep(xs, ys, rrs)
+    fig, ax = plot_rr_sweep(xs, ys, rrs, norm=norm, show_legend=True)
     
     if save_figure:
       Path("figures").mkdir(exist_ok=True)
-      output_path = Path(f"figures/rr_sweep_{norm}.{output_format}")
-      fig.savefig(output_path, dpi=150)
+      output_path = Path(f"figures/rr_sweep_{norm}.pdf")
+      fig.savefig(output_path)
       print(f"[INFO] Saved: {output_path}")
     
     if show_figure:
@@ -106,7 +118,7 @@ else:
 
 #%%
 # Plot all norms
-for norm in ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"]:
+for norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:  # L6 already done
   input_path = Path(f"output/R2_sweep_{norm}.tsv")
   
   if not input_path.exists():
@@ -121,13 +133,13 @@ for norm in ["L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"]:
   
   print(f"[INFO] Processing {norm}: {len(xs)} data points")
   
-  fig, ax = plot_rr_sweep(xs, ys, rrs)
-  ax.set_title(f"Rr sweep ({norm})")
+  # Show legend only for L6
+  fig, ax = plot_rr_sweep(xs, ys, rrs, norm=norm, show_legend=(norm == "L6"))
   
   if save_figure:
     Path("figures").mkdir(exist_ok=True)
-    output_path = Path(f"figures/rr_sweep_{norm}.{output_format}")
-    fig.savefig(output_path, dpi=150)
+    output_path = Path(f"figures/rr_sweep_{norm}.pdf")
+    fig.savefig(output_path)
     print(f"[INFO] Saved: {output_path}")
   
   plt.close(fig)
