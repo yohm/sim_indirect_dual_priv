@@ -1,5 +1,6 @@
 #%%
 #!/usr/bin/env python3
+#%%
 """
 Plot results from main_SweepR2.cpp sweep (bc columns).
 
@@ -8,21 +9,11 @@ Rr sweep in two variants:
   - Points: self_coop vs bc_min(AllD)
   - Bars:   vertical range between bc_min and bc_max
 
-VS Code Interactive tips:
-  - This file uses '#%%' cells. Edit IN_PATH in the "Interactive defaults"
-    cell, then the quick-plot cells will display figures when data is present.
-
-CLI usage:
-  python script/plot_rr_sweep_bcs.py --in R2_sweep.tsv --out figures/rr_bcs.png --ymax 6
-
-Options:
-  --out   Optional path for the saved figure.
-  --show  Display the plot window (or automatically when no --out).
-  --ymax  Max y-axis limit for bc values (default: 5.0).
+Usage:
+  VSCode Interactive: Run cells sequentially, edit norm in the parameter cell
 """
 
-#%% Imports
-import argparse
+#%% Imports and setup
 import csv
 import math
 from pathlib import Path
@@ -66,9 +57,11 @@ def load_rr_bcs(path: Path) -> Dict[int, Tuple[float, Optional[float], Optional[
 #%% Plotting helpers
 
 def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
+                       norm: str = "",
                        ymax: float = 5.0,
-                       xlim: Tuple[float, float] = (0.5, 1.0)):
-  fig, ax = plt.subplots(figsize=(6, 4))
+                       xlim: Tuple[float, float] = (0.5, 1.0),
+                       show_legend: bool = True):
+  fig, ax = plt.subplots(figsize=(6, 5))
   ax.tick_params(axis='both', labelsize=16)
   ax.spines['top'].set_visible(False)
   ax.spines['right'].set_visible(False)
@@ -81,33 +74,45 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
     ys.append(bc_min)
   ax.scatter(xs, ys, s=20, color="tab:blue", alpha=0.6, edgecolors="none")
 
-  highlights = {
-    204: ("tab:purple", "base"),
-    170: ("tab:orange", "IS"),
-    172: ("tab:green", "good-donor-trusting"),
-  }
-  for target_rr, (color, label) in highlights.items():
+  highlights = [
+    (172, "green", "^", "good-donor-trusting"),
+    (170, "darkorange", "D", "IS"),
+    (204, "red", "*", "base")
+  ]
+  for target_rr, color, marker, label in highlights:
     if target_rr in by_rr:
       x, y0, _ = by_rr[target_rr]
       if y0 is not None and math.isfinite(y0):
-        ax.scatter([x], [y0], s=110, color=color, zorder=6,
-                   edgecolors="white", linewidths=0.8)
-        ax.annotate(label, xy=(x, y0), xytext=(3, 3), textcoords='offset points',
-                    color=color, fontsize=16, ha="left", va="bottom")
+        # Plot point even if outside ylim, clip it for display but keep label for legend
+        ax.scatter([x], [y0], s=150, color=color, marker=marker, zorder=6, label=label, clip_on=False)
+      else:
+        # If data is invalid but we want it in legend, plot a dummy point outside the plot area
+        ax.scatter([xlim[0] - 1], [ymax + 1], s=150, color=color, marker=marker, label=label, clip_on=True)
 
-  ax.set_xlabel("self cooperation level", fontsize=18)
-  ax.set_ylabel("$b/c$", fontsize=18)
+  ax.set_xlabel("self cooperation level", fontsize=24)
+  ax.set_ylabel("$b/c$", fontsize=24)
   ax.set_xlim(xlim)
   ax.set_ylim(1.0, ymax)
-  ax.grid(True, linestyle=":", alpha=0.4)
-  fig.tight_layout()
+  ax.set_yticks([1, 2, 3, 4])
+  ax.grid(True, linestyle=":", alpha=0.5)
+  
+  if show_legend:
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=12)
+  
+  if norm:
+    ax.set_title(norm, fontsize=24)
+  
+  fig.subplots_adjust(left=0.18, right=0.97, top=0.91, bottom=0.13)
   return fig, ax
 
 
 def plot_rr_bcs_bars(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
+                     norm: str = "",
                      ymax: float = 5.0,
-                     xlim: Tuple[float, float] = (0.5, 1.0)):
-  fig, ax = plt.subplots(figsize=(6, 4))
+                     xlim: Tuple[float, float] = (0.5, 1.0),
+                     show_legend: bool = True):
+  fig, ax = plt.subplots(figsize=(6, 5))
   ax.tick_params(axis='both', labelsize=16)
   ax.spines['top'].set_visible(False)
   ax.spines['right'].set_visible(False)
@@ -120,81 +125,157 @@ def plot_rr_bcs_bars(by_rr: Dict[int, Tuple[float, Optional[float], Optional[flo
       continue
     ax.vlines(self_coop, bc_min, y_top, colors="tab:blue", alpha=0.5, linewidth=1.5)
 
-  highlights = {
-    204: ("tab:purple", "base"),
-    170: ("tab:orange", "-IS"),
-    172: ("tab:green", "good-donor-trusting"),
-  }
-  for target_rr, (color, label) in highlights.items():
+  highlights = [
+    (172, "green", "good-donor-trusting"),
+    (170, "darkorange", "IS"),
+    (204, "red", "base")
+  ]
+  for target_rr, color, label in highlights:
     if target_rr in by_rr:
       x, bc_min, bc_max = by_rr[target_rr]
       if bc_min is not None and math.isfinite(bc_min):
         y_top = ymax if (bc_max is None or not math.isfinite(bc_max)) else bc_max
         if y_top >= bc_min:
-          ax.vlines(x, bc_min, y_top, colors=color, linewidth=3.0, zorder=6)
-          ax.annotate(label, xy=(x, bc_min), xytext=(6, 6), textcoords='offset points',
-                      color=color, fontsize=16, ha="left", va="bottom")
+          ax.vlines(x, bc_min, y_top, colors=color, linewidth=3.0, zorder=6, label=label)
 
-  ax.set_xlabel("self cooperation level", fontsize=18)
-  ax.set_ylabel("$b/c$", fontsize=18)
+  ax.set_xlabel("self cooperation level", fontsize=24)
+  ax.set_ylabel("$b/c$", fontsize=24)
   ax.set_xlim(xlim)
   ax.set_ylim(1.0, ymax)
-  ax.grid(True, linestyle=":", alpha=0.4)
-  fig.tight_layout()
+  ax.set_yticks([1, 2, 3, 4])
+  ax.grid(True, linestyle=":", alpha=0.5)
+  
+  if show_legend:
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=12)
+  
+  if norm:
+    ax.set_title(norm, fontsize=24)
+  
+  fig.subplots_adjust(left=0.18, right=0.97, top=0.91, bottom=0.13)
   return fig, ax
 
-#%% Interactive defaults
-IN_PATH = Path("../R2_sweep.tsv")  # adjust as needed
-YMAX = 5.0
-XLIM = (0.5, 1.0)
+#%% Parameters
+# Edit the norm to plot
+norm = "L6"  # L1, L2, L3, L4, L5, L6, L7, L8
 
-by_rr_data = None
-if IN_PATH.exists():
-  by_rr_data = load_rr_bcs(IN_PATH)
+save_figure = True
+show_figure = True
+ymax = 4.0
+xlim = (0.5, 1.0)
 
-if by_rr_data:
-  fig_points, ax_points = plot_rr_bcs_points(by_rr_data, ymax=YMAX, xlim=XLIM)
-  try:
-    display(fig_points)
-  except NameError:
-    pass
 
-  fig_bars, ax_bars = plot_rr_bcs_bars(by_rr_data, ymax=YMAX, xlim=XLIM)
-  try:
-    display(fig_bars)
-  except NameError:
-    pass
+#%% Load data and plot (points)
+input_path = Path(f"output/R2_sweep_{norm}.tsv")
+
+if not input_path.exists():
+  print(f"[ERROR] File not found: {input_path}")
 else:
-  print(f"No data loaded from {IN_PATH.resolve()}")
-
-#%% CLI entry point
-
-def main():
-  parser = argparse.ArgumentParser(description="Plot self_coop vs bc range from main_SweepR2 TSV")
-  parser.add_argument("--in", dest="inp", required=True, help="Input TSV produced by main_SweepR2")
-  parser.add_argument("--out", dest="out", default=None, help="Output image path (PNG/SVG/PDF)")
-  parser.add_argument("--show", action="store_true", help="Show the plot window")
-  parser.add_argument("--ymax", dest="ymax", type=float, default=5.0, help="Y-axis upper limit (default: 5)")
-  args = parser.parse_args()
-
-  by_rr = load_rr_bcs(Path(args.inp))
+  by_rr = load_rr_bcs(input_path)
+  
   if not by_rr:
-    raise SystemExit("No valid data rows found in input file.")
+    print(f"[ERROR] No valid data rows found in {input_path}")
+  else:
+    print(f"[INFO] Loaded {len(by_rr)} data points from {input_path}")
+    
+    fig, ax = plot_rr_bcs_points(by_rr, norm=norm, ymax=ymax, xlim=xlim, show_legend=True)
+    
+    if save_figure:
+      Path("figures").mkdir(exist_ok=True)
+      output_path = Path(f"figures/rr_sweep_bcs_points_{norm}.pdf")
+      fig.savefig(output_path)
+      print(f"[INFO] Saved: {output_path}")
+    
+    if show_figure:
+      plt.show()
+    else:
+      plt.close(fig)
 
-  fig, _ = plot_rr_bcs_points(by_rr, ymax=args.ymax)
 
-  inp_path = Path(args.inp)
-  out_path = args.out
-  if not out_path and not args.show:
-    out_path = str(inp_path.with_name(inp_path.stem + "_bcs.png"))
-  if out_path:
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=150)
-    print(f"Saved: {out_path}")
+#%% Load data and plot (bars)
+input_path = Path(f"output/R2_sweep_{norm}.tsv")
 
-  if args.show or not out_path:
-    plt.show()
+if not input_path.exists():
+  print(f"[ERROR] File not found: {input_path}")
+else:
+  by_rr = load_rr_bcs(input_path)
+  
+  if not by_rr:
+    print(f"[ERROR] No valid data rows found in {input_path}")
+  else:
+    print(f"[INFO] Loaded {len(by_rr)} data points from {input_path}")
+    
+    fig, ax = plot_rr_bcs_bars(by_rr, norm=norm, ymax=ymax, xlim=xlim, show_legend=True)
+    
+    if save_figure:
+      Path("figures").mkdir(exist_ok=True)
+      output_path = Path(f"figures/rr_sweep_bcs_bars_{norm}.pdf")
+      fig.savefig(output_path)
+      print(f"[INFO] Saved: {output_path}")
+    
+    if show_figure:
+      plt.show()
+    else:
+      plt.close(fig)
 
 
-if __name__ == "__main__":
-  main()
+#%%
+# Plot all norms (points)
+for norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
+  input_path = Path(f"output/R2_sweep_{norm}.tsv")
+  
+  if not input_path.exists():
+    print(f"[WARNING] File not found: {input_path}, skipping")
+    continue
+  
+  by_rr = load_rr_bcs(input_path)
+  
+  if not by_rr:
+    print(f"[WARNING] No valid data for {norm}, skipping")
+    continue
+  
+  print(f"[INFO] Processing {norm}: {len(by_rr)} data points")
+  
+  fig, ax = plot_rr_bcs_points(by_rr, norm=norm, ymax=ymax, xlim=xlim, show_legend=False)
+  
+  if save_figure:
+    Path("figures").mkdir(exist_ok=True)
+    output_path = Path(f"figures/rr_sweep_bcs_points_{norm}.pdf")
+    fig.savefig(output_path)
+    print(f"[INFO] Saved: {output_path}")
+  
+  plt.close(fig)
+
+print("[INFO] All point plots completed")
+
+
+#%%
+# Plot all norms (bars)
+for norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
+  input_path = Path(f"output/R2_sweep_{norm}.tsv")
+  
+  if not input_path.exists():
+    print(f"[WARNING] File not found: {input_path}, skipping")
+    continue
+  
+  by_rr = load_rr_bcs(input_path)
+  
+  if not by_rr:
+    print(f"[WARNING] No valid data for {norm}, skipping")
+    continue
+  
+  print(f"[INFO] Processing {norm}: {len(by_rr)} data points")
+  
+  fig, ax = plot_rr_bcs_bars(by_rr, norm=norm, ymax=ymax, xlim=xlim, show_legend=(norm == "L6"))
+  
+  if save_figure:
+    Path("figures").mkdir(exist_ok=True)
+    output_path = Path(f"figures/rr_sweep_bcs_bars_{norm}.pdf")
+    fig.savefig(output_path)
+    print(f"[INFO] Saved: {output_path}")
+  
+  plt.close(fig)
+
+print("[INFO] All bar plots completed")
+
+# %%
