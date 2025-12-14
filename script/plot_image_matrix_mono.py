@@ -58,25 +58,30 @@ FOCAL_ORDER = [
 
 #%% Helper functions for rules
 def assrule_for_donor(norm: str) -> np.ndarray:
+    """Convert assessment rule string to binary array.
+    Index represents 3-bit state: (action, donor_rep, recipient_rep)
+    where 1=C/G and 0=D/B.
+    """
     raw = ASSESS_RULES[norm]
     if len(raw) != 8 or any(ch not in "gb" for ch in raw):
         raise ValueError(f"{norm}: assessment rule must be 8 chars 'g'/'b'. Got: {raw}")
-    sO = np.zeros(8, dtype=int)
-    cases = [
-        (1, 0, 0),(1, 0, 1),(1, 1, 0),(1, 1, 1),
-        (0, 0, 0),(0, 0, 1),(0, 1, 0),(0, 1, 1),
-    ]
-    for idx, (cp, stD_bad, stR_bad) in enumerate(cases):
-        iAs = 4*(cp == 0) + 2*(stD_bad == 1) + 1*(stR_bad == 1)
-        sO[iAs] = 1 if raw[idx] == "g" else 0
-    return sO
+    # Reverse the string so index matches bit representation
+    raw_reversed = raw[::-1]
+    return np.array([1 if ch == "g" else 0 for ch in raw_reversed], dtype=int)
 
 
 def actrule_from_table(norm: str) -> np.ndarray:
+    """Convert action rule string to binary array.
+    
+    Index represents 2-bit state: (donor_rep, recipient_rep)
+    where 1=G/C and 0=B/D.
+    """
     seq = ACTION_RULES[norm]
     if len(seq) != 4 or any(ch not in "CD" for ch in seq):
         raise ValueError(f"{norm}: action rule must be 4 chars 'C'/'D'. Got: {seq}")
-    return np.array([1.0 if ch == "C" else 0.0 for ch in seq], dtype=float)
+    # Reverse the string so index matches bit representation
+    seq_reversed = seq[::-1]
+    return np.array([1 if ch == "C" else 0 for ch in seq_reversed], dtype=int)
 
 
 #%% Monomorphic simulation
@@ -87,7 +92,6 @@ def simulate_monomorphic_MEnd(
     q: float,
     nIt: int,
     seed: int,
-    recipient_error: bool,
     mu_assess1: float,
     mu_assess2: float,
     mu_impl: float,
@@ -106,46 +110,45 @@ def simulate_monomorphic_MEnd(
 
     MC = np.ones((N, N), dtype=int)
 
-    for _ in range(1, nIt+1):
+    mean_good = 0.0
+    mean_count = 0
+    for t in range(nIt):
+        if t > t // 10 and t % 100 == 0:
+            mean_good += np.mean(MC)
+            mean_count += 1
+
         Do = randint(0, N-1)
-        Re = Do
-        while Re == Do:
-            Re = randint(0, N-1)
+        Re = (Do + randint(1, N-1) ) % N
 
         stD = MC[Do, Do]
         stR = MC[Do, Re]
-        iA = (2 if stD == 0 else 0) + (1 if stR == 0 else 0)
-        cp_intended = 1 if rand() < act_rule[iA] else 0
-
+        iA = 2 * stD + stR
+        cp_intended = act_rule[iA]
         cp = cp_intended
-        if rand() < mu_impl:
-            cp = 1 - cp
+        if cp_intended == 1 and mu_impl > 0 and rand() < mu_impl:
+            cp = 0
 
         for Obs in range(N):
             if (Obs == Do) or (Obs == Re) or (rand() < q):
                 stD_obs = MC[Obs, Do]
                 stR_obs = MC[Obs, Re]
+                cp_seen = cp
+                if mu_percept > 0 and rand() < mu_percept:
+                    cp_seen = 1 - cp
 
-                cp_seen = cp if (rand() > mu_percept) else (1 - cp)
-
-                iAs = 4*(cp_seen == 0) + 2*(stD_obs == 0) + 1*(stR_obs == 0)
+                iAs = 4 * cp_seen + 2 * stD_obs + stR_obs
                 val = int(ass_rule[iAs])
-
-                if rand() < mu_assess1: val = 1 - val
-                if rand() < mu_assess2: val = 1 - val
                 MC[Obs, Do] = val
+                if mu_assess1 > 0 and rand() < mu_assess1:
+                    MC[Obs, Do] = 1 - MC[Obs, Do]
 
                 if updates_recipient:
-                    if recipient_error:
-                        cp_seen_rec = cp if (rand() > mu_percept) else (1 - cp)
-                        val_r = 1 if cp_seen_rec == 1 else 0
-                        if rand() < mu_assess1: val_r = 1 - val_r
-                        if rand() < mu_assess2: val_r = 1 - val_r
-                        MC[Obs, Re] = val_r
-                    else:
-                        MC[Obs, Re] = 1 if cp == 1 else 0
+                    val_r = 1 if cp_seen == 1 else 0
+                    MC[Obs, Re] = val_r
+                if mu_assess2 > 0 and rand() < mu_assess2:
+                    MC[Obs, Re] = 1 - MC[Obs, Re]
 
-    return MC
+    return MC, mean_good/mean_count
 
 
 #%% Plotting functions
@@ -209,9 +212,8 @@ PARAMS = {
     "mu_assess2": 0.02,
     "mu_impl": 0.02,
     "q": 1.0,
-    "nIt": 20000,
-    "seed": 0,
-    "recipient_error": True,
+    "nIt": 200000,
+    "seed": 12346,
 }
 
 save_figure = True
@@ -220,7 +222,7 @@ output_format = "pdf"  # "png", "pdf", or "svg"
 
 
 #%% Run simulation and plot
-MEnd = simulate_monomorphic_MEnd(focal=focal_nm, **PARAMS)
+MEnd, mean_h = simulate_monomorphic_MEnd(focal=focal_nm, **PARAMS)
 
 color = default_colors[focal_nm]
 tag = f"{focal_nm}_mono"
@@ -230,7 +232,7 @@ if save_figure:
     Path("figures").mkdir(exist_ok=True)
     outpath = Path(f"figures/image_matrix_mono_{tag}.{output_format}")
 
-print(f"{tag}  MEnd shape={MEnd.shape}, good-ratio={MEnd.mean():.3f}")
+print(f"{tag}  MEnd shape={MEnd.shape}, good-ratio={mean_h:.3f}")
 print(f"params: mu_percept={PARAMS['mu_percept']}, mu_assess1={PARAMS['mu_assess1']}, mu_assess2={PARAMS['mu_assess2']}, mu_impl={PARAMS['mu_impl']}, q={PARAMS['q']}")
 
 show_binary_matrix(
@@ -245,7 +247,7 @@ show_binary_matrix(
 # %%
 # Run for multiple norms
 for focal_nm in ["L3", "L3_IS", "L5", "L5_IS"]:
-    MEnd = simulate_monomorphic_MEnd(focal=focal_nm, **PARAMS)
+    MEnd, mean_h = simulate_monomorphic_MEnd(focal=focal_nm, **PARAMS)
     
     color = default_colors[focal_nm]
     tag = f"{focal_nm}_mono"
@@ -255,7 +257,7 @@ for focal_nm in ["L3", "L3_IS", "L5", "L5_IS"]:
         Path("figures").mkdir(exist_ok=True)
         outpath = Path(f"figures/image_matrix_mono_{tag}.{output_format}")
     
-    print(f"{tag}  MEnd shape={MEnd.shape}, good-ratio={MEnd.mean():.3f}")
+    print(f"{tag}  MEnd shape={MEnd.shape}, good-ratio={mean_h:.3f}")
     
     show_binary_matrix(
         MEnd,
