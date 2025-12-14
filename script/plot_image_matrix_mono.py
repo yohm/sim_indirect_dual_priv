@@ -8,157 +8,78 @@ Usage:
 """
 
 #%% Imports and setup
+import json
+import subprocess
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from pathlib import Path
 
-
-#%% Assessment and action rules
-# ---------------- Assessment rules (donor) ----------------
-ASSESS_RULES = {
-    "L1": "ggggbgbb",
-    "L1v": "ggggbgbb",
-    "L2": "gbggbgbb",
-    "L2v": "gbggbgbb",
-    "L3": "ggggbgbg",
-    "L4": "gggbbgbg",
-    "L5": "gbggbgbg",
-    "L6": "gbgbbgbg",
-    "L7": "gggbbgbb",
-    "L8": "gbgbbgbb",
-    "ALLC": "gggggggg",
-    "ALLD": "bbbbbbbb",
-}
-
-# ---------------- Action rules ----------------
-ACTION_RULES = {
-    "L1": "CDCC",
-    "L1v": "CDCD",
-    "L2": "CDCC",
-    "L2v": "CDCD",
-    "L3": "CDCD",
-    "L4": "CDCD",
-    "L5": "CDCD",
-    "L6": "CDCD",
-    "L7": "CDCD",
-    "L8": "CDCD",
-    "ALLC": "CCCC",
-    "ALLD": "DDDD",
-}
-
-FOCAL_ORDER = [
-    "L1","L1_IS","L1v","L1v_IS",
-    "L2","L2_IS","L2v","L2v_IS",
-    "L3","L3_IS","L4","L4_IS",
-    "L5","L5_IS","L6","L6_IS",
-    "L7","L7_IS","L8","L8_IS",
-]
+# Resolve repo root and executables
+ROOT = Path(__file__).resolve().parents[1]
+PRG_EXE = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
 
 
-#%% Helper functions for rules
-def assrule_for_donor(norm: str) -> np.ndarray:
-    """Convert assessment rule string to binary array.
-    Index represents 3-bit state: (action, donor_rep, recipient_rep)
-    where 1=C/G and 0=D/B.
-    """
-    raw = ASSESS_RULES[norm]
-    if len(raw) != 8 or any(ch not in "gb" for ch in raw):
-        raise ValueError(f"{norm}: assessment rule must be 8 chars 'g'/'b'. Got: {raw}")
-    # Reverse the string so index matches bit representation
-    raw_reversed = raw[::-1]
-    return np.array([1 if ch == "g" else 0 for ch in raw_reversed], dtype=int)
-
-
-def actrule_from_table(norm: str) -> np.ndarray:
-    """Convert action rule string to binary array.
-    
-    Index represents 2-bit state: (donor_rep, recipient_rep)
-    where 1=G/C and 0=B/D.
-    """
-    seq = ACTION_RULES[norm]
-    if len(seq) != 4 or any(ch not in "CD" for ch in seq):
-        raise ValueError(f"{norm}: action rule must be 4 chars 'C'/'D'. Got: {seq}")
-    # Reverse the string so index matches bit representation
-    seq_reversed = seq[::-1]
-    return np.array([1 if ch == "C" else 0 for ch in seq_reversed], dtype=int)
-
-
-#%% Monomorphic simulation
-def simulate_monomorphic_MEnd(
+#%% Helper functions for running C++ simulation
+def run_cpp_simulation(
+    exe: str,
     focal: str,
     N: int,
-    mu_percept: float,
-    q: float,
-    nIt: int,
-    seed: int,
-    mu_assess1: float,
-    mu_assess2: float,
-    mu_impl: float,
-) -> np.ndarray:
-
-    rng = np.random.default_rng(seed)
-    rand = rng.random
-    randint = lambda lo, hi: int(rng.integers(lo, hi+1))
-
-    def _base_name(s: str) -> str:
-        return s.split("_")[0]
-
-    ass_rule = assrule_for_donor(_base_name(focal))
-    act_rule = actrule_from_table(_base_name(focal))
-    updates_recipient = focal.upper().endswith("_IS")
-
-    MC = np.ones((N, N), dtype=int)
-
-    mean_good = 0.0
-    mean_count = 0
-    for t in range(nIt):
-        if t > t // 10 and t % 100 == 0:
-            mean_good += np.mean(MC)
-            mean_count += 1
-
-        Do = randint(0, N-1)
-        Re = (Do + randint(1, N-1) ) % N
-
-        stD = MC[Do, Do]
-        stR = MC[Do, Re]
-        iA = 2 * stD + stR
-        cp_intended = act_rule[iA]
-        cp = cp_intended
-        if cp_intended == 1 and mu_impl > 0 and rand() < mu_impl:
-            cp = 0
-
-        for Obs in range(N):
-            if (Obs == Do) or (Obs == Re) or (rand() < q):
-                stD_obs = MC[Obs, Do]
-                stR_obs = MC[Obs, Re]
-                cp_seen = cp
-                if mu_percept > 0 and rand() < mu_percept:
-                    cp_seen = 1 - cp
-
-                iAs = 4 * cp_seen + 2 * stD_obs + stR_obs
-                val = int(ass_rule[iAs])
-                MC[Obs, Do] = val
-                if mu_assess1 > 0 and rand() < mu_assess1:
-                    MC[Obs, Do] = 1 - MC[Obs, Do]
-
-                if updates_recipient:
-                    val_r = 1 if cp_seen == 1 else 0
-                    MC[Obs, Re] = val_r
-                if mu_assess2 > 0 and rand() < mu_assess2:
-                    MC[Obs, Re] = 1 - MC[Obs, Re]
-
-    return MC, mean_good/mean_count
+    params: dict,
+) -> np.ndarray | None:
+    """Run C++ executable and parse image.txt output."""
+    json_params = json.dumps(params)
+    cmd = [exe, "-j", json_params, focal, str(N), "-g"]
+    print(f"[INFO] Running command: {' '.join(cmd)}")
+    try:
+        res = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        print(f"[INFO] C++ simulation completed for {focal} (N={N})")
+        if res.stdout:
+            print(res.stdout)
+        
+        # Read image.txt (created in the current directory where script is run)
+        image_path = Path("image.txt").resolve()
+        print(f"[INFO] Reading image from: {image_path}")
+        if not image_path.exists():
+            print(f"[ERROR] image.txt not found at {image_path}", file=sys.stderr)
+            return None
+        
+        with open(image_path, "r") as f:
+            lines = [line.rstrip() for line in f if line.strip()]
+        
+        # Parse image: 'x' = bad (0), '.' = good (1)
+        N_actual = len(lines)
+        MEnd = np.zeros((N_actual, N_actual), dtype=int)
+        for i, line in enumerate(lines):
+            for j, ch in enumerate(line):
+                if ch == '.':
+                    MEnd[i, j] = 1
+                elif ch == 'x':
+                    MEnd[i, j] = 0
+        
+        return MEnd
+        
+    except FileNotFoundError:
+        print(f"[ERROR] Executable not found: {exe}", file=sys.stderr)
+        print(f"[INFO] Please build the project first:", file=sys.stderr)
+        print(f"  cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release", file=sys.stderr)
+        print(f"  cmake --build cmake-build-release -j", file=sys.stderr)
+        return None
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Execution failed with return code {e.returncode}", file=sys.stderr)
+        print(f"[ERROR] Command: {' '.join(cmd)}", file=sys.stderr)
+        return None
 
 
 #%% Plotting functions
-def _focal_label(name: str) -> str:
-    return name.replace("_IS", "-IS")
-
-
 def show_binary_matrix(
     MEnd: np.ndarray,
-    focal_name: str,
     good_color: str,
     outpath: Path | None = None,
     show: bool = True,
@@ -188,66 +109,70 @@ def show_binary_matrix(
 
 #%% Default colors for each norm
 default_colors = {
-    "L1": "#4f6db8", "L1_IS": "#4f6db8",
-    "L1v": "#4f6db8", "L1v_IS": "#4f6db8",
-    "L2": "#b6483a", "L2_IS": "#b6483a",
-    "L2v": "#b6483a", "L2v_IS": "#b6483a",
-    "L3": "#86a657", "L3_IS": "#86a657",
-    "L4": "#6b5fb9", "L4_IS": "#6b5fb9",
-    "L5": "#3d95ad", "L5_IS": "#3d95ad",
-    "L6": "#d1781c", "L6_IS": "#d1781c",
-    "L7": "#8da4ca", "L7_IS": "#8da4ca",
-    "L8": "#c47a9b", "L8_IS": "#c47a9b",
+    "L1": "#4f6db8", "L1-IS": "#4f6db8",
+    "L1v": "#4f6db8", "L1v-IS": "#4f6db8",
+    "L2": "#b6483a", "L2-IS": "#b6483a",
+    "L2v": "#b6483a", "L2v-IS": "#b6483a",
+    "L3": "#86a657", "L3-IS": "#86a657",
+    "L4": "#6b5fb9", "L4-IS": "#6b5fb9",
+    "L5": "#3d95ad", "L5-IS": "#3d95ad",
+    "L6": "#d1781c", "L6-IS": "#d1781c",
+    "L7": "#8da4ca", "L7-IS": "#8da4ca",
+    "L8": "#c47a9b", "L8-IS": "#c47a9b",
 }
 
 
 #%% Simulation parameters
 # Edit these parameters as needed
-focal_nm = "L3"  # or "L3_IS", "L5", etc.
+focal_nm = "L3"
 
-PARAMS = {
-    "N": 50,
+# Parameters for C++ simulation
+CPP_PARAMS = {
+    "t_init": 1000,
+    "t_measure": 1000,
+    "q": 1.0,
+    "mu_impl": 0.02,
     "mu_percept": 0.0,
     "mu_assess1": 0.02,
     "mu_assess2": 0.02,
-    "mu_impl": 0.02,
-    "q": 1.0,
-    "nIt": 200000,
-    "seed": 12346,
+    "seed": 123456789,
 }
 
+N = 50
 save_figure = True
 show_figure = True
 output_format = "pdf"  # "png", "pdf", or "svg"
 
 
-#%% Run simulation and plot
-MEnd, mean_h = simulate_monomorphic_MEnd(focal=focal_nm, **PARAMS)
+#%% Run simulation and plot (using C++ implementation)
+MEnd = run_cpp_simulation(PRG_EXE, focal_nm, N, CPP_PARAMS)
 
-color = default_colors[focal_nm]
-tag = f"{focal_nm}_mono"
+if MEnd is None:
+    print("[ERROR] Simulation failed. Exiting.")
+else:
+    color = default_colors[focal_nm]
+    tag = f"{focal_nm}_mono"
 
-outpath = None
-if save_figure:
-    Path("figures").mkdir(exist_ok=True)
-    outpath = Path(f"figures/image_matrix_mono_{tag}.{output_format}")
-
-print(f"{tag}  MEnd shape={MEnd.shape}, good-ratio={mean_h:.3f}")
-print(f"params: mu_percept={PARAMS['mu_percept']}, mu_assess1={PARAMS['mu_assess1']}, mu_assess2={PARAMS['mu_assess2']}, mu_impl={PARAMS['mu_impl']}, q={PARAMS['q']}")
-
-show_binary_matrix(
-    MEnd,
-    focal_name=focal_nm,
-    good_color=color,
-    outpath=outpath,
-    show=show_figure,
-)
+    outpath = None
+    if save_figure:
+        Path("figures").mkdir(exist_ok=True)
+        outpath = Path(f"figures/image_matrix_mono_{tag}.{output_format}")
+    show_binary_matrix(
+        MEnd,
+        good_color=color,
+        outpath=outpath,
+        show=show_figure,
+    )
 
 
 # %%
-# Run for multiple norms
-for focal_nm in ["L3", "L3_IS", "L5", "L5_IS"]:
-    MEnd, mean_h = simulate_monomorphic_MEnd(focal=focal_nm, **PARAMS)
+# Run for multiple norms (using C++ implementation)
+for focal_nm in ["L3", "L3-IS", "L5", "L5-IS"]:
+    MEnd = run_cpp_simulation(PRG_EXE, focal_nm, N, CPP_PARAMS)
+    
+    if MEnd is None:
+        print(f"[ERROR] Simulation failed for {focal_nm}. Skipping.")
+        continue
     
     color = default_colors[focal_nm]
     tag = f"{focal_nm}_mono"
@@ -256,12 +181,8 @@ for focal_nm in ["L3", "L3_IS", "L5", "L5_IS"]:
     if save_figure:
         Path("figures").mkdir(exist_ok=True)
         outpath = Path(f"figures/image_matrix_mono_{tag}.{output_format}")
-    
-    print(f"{tag}  MEnd shape={MEnd.shape}, good-ratio={mean_h:.3f}")
-    
     show_binary_matrix(
         MEnd,
-        focal_name=focal_nm,
         good_color=color,
         outpath=outpath,
         show=show_figure,
