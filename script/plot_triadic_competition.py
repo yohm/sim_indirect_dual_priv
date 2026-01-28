@@ -75,82 +75,124 @@ def run_and_parse(exe: Path, norm: str, j_arg: str | None):
     return eq[:3], rhos  # use first three eq entries
 
 def fmt_pct1(x):  return f"{x*100:.1f}%"
+
 def fmt_rho(x):
     if isinstance(x, (int, float)):
         return "<0.001" if x < 1e-3 else f"{x:.3f}"
     return "N/A"
 
+# ---------- Colors for norms ----------
+
+default_colors = {
+    "L1": "#4f6db8", "L1-IS": "#4f6db8",
+    "L1v": "#4f6db8", "L1v-IS": "#4f6db8",
+    "L2": "#b6483a", "L2-IS": "#b6483a",
+    "L2v": "#b6483a", "L2v-IS": "#b6483a",
+    "L3": "#86a657", "L3-IS": "#86a657",
+    "L4": "#6b5fb9", "L4-IS": "#6b5fb9",
+    "L5": "#3d95ad", "L5-IS": "#3d95ad",
+    "L6": "#d1781c", "L6-IS": "#d1781c",
+    "L7": "#8da4ca", "L7-IS": "#8da4ca",
+    "L8": "#c47a9b", "L8-IS": "#c47a9b",
+}
+
 # ---------- Plot ----------
 
+
 def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
+    # color for target norm
+    target_color = default_colors.get(norm_label, "black")
+
     # Node positions
-    P_Target   = (0.0,   1.0)
-    P_ALLD = (-1.20, -0.72)
-    P_ALLC = ( 1.20, -0.72)
+    P_Target = (0.0, 1.0)
+    P_ALLD   = (-1.20, -0.72)
+    P_ALLC   = (1.20, -0.72)
     R = 0.40
 
     fig, ax = plt.subplots(figsize=(5.4, 5.0), dpi=150)
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
     ax.set_xlim(-2.05, 2.05)
     ax.set_ylim(-1.80, 1.95)
-    ax.axis('off')
+    ax.axis("off")
 
-    # Nodes
     def place_node(name, xy, face, edge, text_color, percent_text, where):
         x, y = xy
-        ax.add_patch(Circle((x, y), R, facecolor=face, edgecolor=edge,
-                            linewidth=1.8, zorder=3, clip_on=False))
-        ax.text(x, y, percent_text, ha="center", va="center", color=text_color,
-                fontsize=13, fontweight="bold", zorder=4)
-        gap_top = 0.15
-        gap_bot = 0.15
+        ax.add_patch(
+            Circle(
+                (x, y), R,
+                facecolor=face,
+                edgecolor=edge,
+                linewidth=1.8,
+                zorder=3,
+                clip_on=False,
+            )
+        )
+        ax.text(
+            x, y, percent_text,
+            ha="center", va="center",
+            color=text_color,
+            fontsize=13,
+            fontweight="bold",
+            zorder=4,
+        )
         if where == "top":
-            ax.text(x, y + R + gap_top, name, ha="center", va="bottom",
-                    fontsize=13, color="black", zorder=4)
+            ax.text(
+                x, y + R + 0.15, name,
+                ha="center", va="bottom",
+                fontsize=13, color="black", zorder=4,
+            )
         else:
-            ax.text(x, y - R - gap_bot, name, ha="center", va="top",
-                    fontsize=13, color="black", zorder=4)
+            ax.text(
+                x, y - R - 0.15, name,
+                ha="center", va="top",
+                fontsize=13, color="black", zorder=4,
+            )
 
     gray = "#bdbdbd"
-    place_node(f"{norm_label}",   P_Target,   "black", "black", "white", fmt_pct1(eq[0]), "top")
-    place_node("ALLD", P_ALLD, gray,       gray,      "black", fmt_pct1(eq[2]), "bottom")
-    place_node("ALLC", P_ALLC, "white",    gray,      "black", fmt_pct1(eq[1]), "bottom")
 
-    # Curved arrows + labels
+    place_node(norm_label, P_Target, target_color, target_color, "white", fmt_pct1(eq[0]), "top")
+    place_node("ALLD", P_ALLD, gray, gray, "black", fmt_pct1(eq[2]), "bottom")
+    place_node("ALLC", P_ALLC, "white", gray, "black", fmt_pct1(eq[1]), "bottom")
+
     def edge_arrow_with_label(p1, p2, value, rad, text_offset=0.18, ms=12, lw=1.3):
-        a = FancyArrowPatch(p1, p2, connectionstyle=f"arc3,rad={rad}",
-                            arrowstyle="-|>", mutation_scale=ms,
-                            linewidth=lw, color="black",
-                            shrinkA=26, shrinkB=26, zorder=2)
+        a = FancyArrowPatch(
+            p1, p2,
+            connectionstyle=f"arc3,rad={rad}",
+            arrowstyle="-|>",
+            mutation_scale=ms,
+            linewidth=lw,
+            color="black",
+            shrinkA=26,
+            shrinkB=26,
+            zorder=2,
+        )
         ax.add_patch(a)
+
         (x1, y1), (x2, y2) = p1, p2
-        mx, my = ((x1+x2)/2.0, (y1+y2)/2.0)
-        dx, dy = (x2-x1, y2-y1)
+        mx, my = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+        dx, dy = x2 - x1, y2 - y1
         nx, ny = -dy, dx
-        norm = (nx*nx + ny*ny)**0.5 or 1.0
-        nx, ny = nx/norm, ny/norm
+        norm = (nx * nx + ny * ny) ** 0.5 or 1.0
+        nx, ny = nx / norm, ny / norm
         sign = 1 if rad >= 0 else -1
-        ox, oy = mx + nx*text_offset*sign, my + ny*text_offset*sign
-        ax.text(ox, oy, fmt_rho(value), ha="center", va="center",
-                fontsize=11, color="black", zorder=5,
-                bbox=dict(boxstyle="round,pad=0.22", fc="white", ec="none", alpha=0.9))
+        ox, oy = mx + nx * text_offset * sign, my + ny * text_offset * sign
 
-    outer_left_rad   = -0.30
-    outer_bottom_rad = -0.18
-    outer_right_rad  = -0.30
-    inner_right_rad  = -0.24
-    inner_bottom_rad = -0.18
-    inner_left_rad   = -0.24
+        ax.text(
+            ox, oy, fmt_rho(value),
+            ha="center", va="center",
+            fontsize=11,
+            color="black",
+            zorder=5,
+            bbox=dict(boxstyle="round,pad=0.22", fc="white", ec="none", alpha=0.9),
+        )
 
-    # Outer 3
-    edge_arrow_with_label(P_Target,   P_ALLD, rhos[2][0], rad=outer_left_rad)
-    edge_arrow_with_label(P_ALLD, P_ALLC, rhos[1][2], rad=outer_bottom_rad)
-    edge_arrow_with_label(P_ALLC, P_Target,   rhos[0][1], rad=outer_right_rad)
+    edge_arrow_with_label(P_Target, P_ALLD, rhos[2][0], rad=-0.30)
+    edge_arrow_with_label(P_ALLD, P_ALLC, rhos[1][2], rad=-0.18)
+    edge_arrow_with_label(P_ALLC, P_Target, rhos[0][1], rad=-0.30)
 
-    # Inner 3
-    edge_arrow_with_label(P_Target,   P_ALLC, rhos[1][0], rad=inner_right_rad)
-    edge_arrow_with_label(P_ALLC, P_ALLD, rhos[2][1], rad=inner_bottom_rad)
-    edge_arrow_with_label(P_ALLD, P_Target,   rhos[0][2], rad=inner_left_rad)
+    edge_arrow_with_label(P_Target, P_ALLC, rhos[1][0], rad=-0.24)
+    edge_arrow_with_label(P_ALLC, P_ALLD, rhos[2][1], rad=-0.18)
+    edge_arrow_with_label(P_ALLD, P_Target, rhos[0][2], rad=-0.24)
 
     if outpath is not None:
         outpath.parent.mkdir(parents=True, exist_ok=True)
