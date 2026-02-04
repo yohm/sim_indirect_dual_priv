@@ -59,7 +59,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
                        xlim: Tuple[float, float] = (0.5, 1.0),
                        show_legend: bool = True):
   fig, ax = plt.subplots(figsize=(6, 5))
-  ax.tick_params(axis='both', labelsize=16)
+  ax.tick_params(axis='both', labelsize=20)
   ax.spines['top'].set_visible(False)
   ax.spines['right'].set_visible(False)
 
@@ -69,25 +69,25 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
       continue
     xs.append(self_coop)
     ys.append(bc_min)
-  ax.scatter(xs, ys, s=20, color="tab:blue", alpha=0.6, edgecolors="none")
+  ax.scatter(xs, ys, s=30, color="tab:blue", alpha=1.0, edgecolors="none")
 
   highlights = [
-    (172, "green", "^", "good-donor-trusting"),
-    (170, "darkorange", "D", "IS"),
-    (204, "red", "*", "base")
+    (172, "purple", "^", "GDT"),
+    (170, "darkorange", "s", "IS"),
+    (204, "navy", "o", "base")
   ]
   for target_rr, color, marker, label in highlights:
     if target_rr in by_rr:
       x, y0, _ = by_rr[target_rr]
       if y0 is not None and math.isfinite(y0):
         # Plot point even if outside ylim, clip it for display but keep label for legend
-        ax.scatter([x], [y0], s=150, color=color, marker=marker, zorder=6, label=label, clip_on=False)
+        ax.scatter([x], [y0], s=250, color=color, marker=marker, zorder=6, label=label, clip_on=False)
       else:
         # If data is invalid but we want it in legend, plot a dummy point outside the plot area
-        ax.scatter([xlim[0] - 1], [ymax + 1], s=150, color=color, marker=marker, label=label, clip_on=True)
+        ax.scatter([xlim[0] - 1], [ymax + 1], s=250, color=color, marker=marker, label=label, clip_on=True)
 
-  ax.set_xlabel("self cooperation level", fontsize=24)
-  ax.set_ylabel("$b/c$", fontsize=24)
+  ax.set_xlabel("self cooperation level", fontsize=30)
+  ax.set_ylabel("$b/c$", fontsize=30)
   ax.set_xlim(xlim)
   ax.set_ylim(1.0, ymax)
   ax.set_yticks([1, 2, 3, 4])
@@ -95,12 +95,13 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
   
   if show_legend:
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=12)
+    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=24, loc="upper right",
+              labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
   
   if norm:
-    ax.set_title(norm, fontsize=24)
+    ax.set_title(norm, fontsize=32)
   
-  fig.subplots_adjust(left=0.13, right=0.95, top=0.91, bottom=0.15)
+  fig.subplots_adjust(left=0.13, right=0.95, top=0.91, bottom=0.17)
   return fig, ax
 
 

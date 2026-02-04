@@ -97,8 +97,8 @@ def _style_axes(ax, remove_top_right=True):
     if remove_top_right:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-    ax.tick_params(axis='y', labelsize=16)
-    ax.tick_params(axis='x', labelsize=24)
+    ax.tick_params(axis='y', labelsize=18)
+    ax.tick_params(axis='x', labelsize=36)
 
 
 def plot_cooperation_level(norm1: str, norm2: str,
@@ -111,18 +111,18 @@ def plot_cooperation_level(norm1: str, norm2: str,
     ys = [val1 if val1 is not None else 0.0,
           val2 if val2 is not None else 0.0]
 
-    bar_width = 0.6
+    bar_width = 0.8
     ax.bar(xs, ys, width=bar_width, color=colors, alpha=0.9)
     
     # Display values on top of bars (2 decimal places)
     for x, y in zip(xs, ys):
-        ax.text(x, y, f'{y:.2f}', ha='center', va='bottom', fontsize=16)
+        ax.text(x, y, f'{y:.2f}', ha='center', va='bottom', fontsize=24)
     
     ax.set_xticks(xs)
     ax.set_xticklabels([norm1, norm2])
     ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(0.0, 1.0)
-    ax.set_ylabel("self cooperation level", fontsize=24)
+    ax.set_ylabel("self-cooperation level", fontsize=28)
 
     _style_axes(ax)
     fig.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.13)
@@ -146,7 +146,7 @@ def plot_bc_range(norm1: str, norm2: str,
         bottoms.append(y0p)
         tops.append(y1p)
 
-    bar_width = 0.6
+    bar_width = 0.8
     for x, orig_bc, y0p, y1p, c in zip(xs, (range1, range2), bottoms, tops, colors):
         if y1p >= y0p:
             ax.bar(x, y1p - y0p, bottom=y0p, width=bar_width,
@@ -162,7 +162,7 @@ def plot_bc_range(norm1: str, norm2: str,
     ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(1.0, 4.0)
     ax.set_yticks([1, 2, 3, 4])
-    ax.set_ylabel("$b/c$", fontsize=24)
+    ax.set_ylabel("$b/c$", fontsize=28)
     # ax.set_title(f"Stable b/c Range: {norm1} vs {norm2}", fontsize=16)
 
     _style_axes(ax)
@@ -226,13 +226,13 @@ from pathlib import Path
 Path("figures").mkdir(exist_ok=True)
 
 print(f"[INFO] Creating self cooperation level plot...")
-fig, ax = plot_cooperation_level(norm1, norm2, coop1, coop2)
+fig, ax = plot_cooperation_level(norm1+"-base", norm2, coop1, coop2)
 fig.savefig(f"figures/pc_{norm1}_vs_{norm2}.pdf")
 
 
 #%% Plot 2: b/c range
 print(f"[INFO] Creating b/c range plot...")
-fig,ax = plot_bc_range(norm1, norm2, bc_range1, bc_range2)
+fig,ax = plot_bc_range(norm1+"-base", norm2, bc_range1, bc_range2)
 fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
 
 # %%
@@ -241,12 +241,12 @@ def run_and_plot_all(norm1: str, norm2: str, params: dict, fig: plt.Figure = plt
 
     fig.clf()
     print(f"[INFO] Creating self cooperation level plot...")
-    fig, ax = plot_cooperation_level(norm1, norm2, coop1, coop2)
+    fig, ax = plot_cooperation_level(norm1+"-base", norm2, coop1, coop2)
     fig.savefig(f"figures/pc_{norm1}_vs_{norm2}.pdf")
 
     fig.clf()
     print(f"[INFO] Creating b/c range plot...")
-    fig,ax = plot_bc_range(norm1, norm2, bc_range1, bc_range2)
+    fig,ax = plot_bc_range(norm1+"-base", norm2, bc_range1, bc_range2)
     fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
 
 # %%

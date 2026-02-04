@@ -47,38 +47,39 @@ def load_rr_sweep(path: Path) -> Tuple[List[float], List[float], List[int]]:
 
 def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int], norm: str = "", show_legend: bool = True):
   fig, ax = plt.subplots(figsize=(6, 5))
-  ax.scatter(xs, ys, s=18, alpha=0.7, edgecolors="none")
+  ax.scatter(xs, ys, s=30, alpha=1.0, edgecolors="none")
 
   highlights = [
-    (172, "green", "^", "good-donor-trusting"), # "Rr=172 (good-donor-trusting)")
-    (170, "darkorange", "D", "IS"), # "Rr=170 (IS)"), changed to dark orange diamond for visibility
-    (204, "red", "*", "base") # "Rr=204 (base)")
+    (172, "purple", "^", "GDT"), # "Rr=172 (good-donor-trusting)")
+    (170, "darkorange", "s", "IS"), # "Rr=170 (IS)")
+    (204, "navy", "o", "base") # "Rr=204 (base)")
   ]
   for target, color, marker, label in highlights:
     idxs = [i for i, rr in enumerate(rrs) if rr == target]
     if idxs:
-      ax.scatter([xs[i] for i in idxs], [ys[i] for i in idxs], s=150,
+      ax.scatter([xs[i] for i in idxs], [ys[i] for i in idxs], s=250,
                  color=color, marker=marker, label=label)
 
-  ax.set_xlabel("self cooperation level", fontsize=24)
-  ax.set_ylabel("equilibrium fraction", fontsize=24)
-  ax.tick_params(axis='both', labelsize=16)
+  ax.set_xlabel("self-cooperation level", fontsize=30)
+  ax.set_ylabel("equilibrium fraction", fontsize=30)
+  ax.tick_params(axis='both', labelsize=20)
   ax.grid(True, linestyle=":", alpha=0.5)
   
   # Reverse legend order so base appears first
   if show_legend:
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=12)
+    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=24, loc="center right",
+              labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
   
   # Set title if norm is provided
   if norm:
-    ax.set_title(norm, fontsize=24)
+    ax.set_title(norm, fontsize=32)
   
   # Remove top and right spines
   ax.spines['top'].set_visible(False)
   ax.spines['right'].set_visible(False)
   
-  fig.subplots_adjust(left=0.18, right=0.97, top=0.91, bottom=0.13)
+  fig.subplots_adjust(left=0.18, right=0.97, top=0.91, bottom=0.17)
   return fig, ax
 
 #%% Parameters
