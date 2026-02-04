@@ -1,49 +1,29 @@
 #!/usr/bin/env python3
+#%%
 """
 Draw a triadic competition diagram for various norms.
 
-- Calls the compiled executable `inspect_EvolPrivRepGame` with a single norm string
-  (e.g., L1, L6-IS, AllD, 0xHEX, or Rd-Rr-P, etc.). The executable must print a single
-  JSON object that includes:
-    - "eq":   array-like, equilibrium shares; we use the first three entries
-    - "rhos": 3x3 pairwise transition/intensity matrix (or analogous)
+Calls the compiled executable `inspect_EvolPrivRepGame` with a single norm string
+(e.g., L1, L6-IS, AllD, 0xHEX, or Rd-Rr-P, etc.). The executable must print a single
+JSON object that includes:
+  - "eq":   array-like, equilibrium shares; we use the first three entries
+  - "rhos": 3x3 pairwise transition/intensity matrix (or analogous)
 
-- Supports forwarding JSON params with -j (either a path to JSON file or inline JSON string),
-  and custom build dir (e.g., cmake-build-release).
-
-Usage (from repo root):
-  uv venv .venv && source .venv/bin/activate
-  uv pip install -r script/requirements.txt
-
-Usage examples:
-  # show window for L1
-  python script/plot_triadic_competition.py --norms L1
-
-  # multiple norms, save each as figures/triad_<norm>.(png|pdf|svg) without showing windows
-  python script/plot_triadic_competition.py --norms L1 L1-IS L1v L1v-IS L2 L2-IS L2v L2v-IS L3 L3-IS L4 L4-IS L5 L5-IS L6 L6-IS L7 L7-IS L8 L8-IS\
-      --build-dir cmake-build-release \
-      --params '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.00,"mu_percept":0.05,"seed":123456789}' \
-      --save --format pdf --no-show
-
-  # pass PRG params via JSON file and custom build dir
-  python script/plot_triadic_competition.py --norms L1-IS \
-      --build-dir cmake-build-release \
-      --params '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":0.9,"mu_assess1":0.05,"mu_assess2":0.0,"mu_impl":0.0,"mu_percept":0.0,"seed":123456789}' \
-      --save --format png
+Usage:
+  VSCode Interactive: Run cells sequentially, edit norms and params in the parameter cell
 """
 
-import argparse
+#%% Imports and setup
 import json
 import os
 import sys
 from pathlib import Path
 import subprocess
 
-import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, FancyArrowPatch
 
-# ---------- Utils ----------
+#%% Utils
 
 ROOT = Path(__file__).resolve().parents[1]
 EPRG_DEFAULT = ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame"
@@ -81,33 +61,32 @@ def fmt_rho(x):
         return "<0.001" if x < 1e-3 else f"{x:.3f}"
     return "N/A"
 
-# ---------- Colors for norms ----------
+#%% Colors for norms
 
 default_colors = {
-    "L1": "#4f6db8", "L1-IS": "#4f6db8",
-    "L1v": "#4f6db8", "L1v-IS": "#4f6db8",
-    "L2": "#b6483a", "L2-IS": "#b6483a",
-    "L2v": "#b6483a", "L2v-IS": "#b6483a",
-    "L3": "#86a657", "L3-IS": "#86a657",
-    "L4": "#6b5fb9", "L4-IS": "#6b5fb9",
-    "L5": "#3d95ad", "L5-IS": "#3d95ad",
-    "L6": "#d1781c", "L6-IS": "#d1781c",
-    "L7": "#8da4ca", "L7-IS": "#8da4ca",
-    "L8": "#c47a9b", "L8-IS": "#c47a9b",
+    "L1": "#4f6db8",
+    "L1v": "#4f6db8",
+    "L2": "#b6483a",
+    "L2v": "#b6483a",
+    "L3": "#86a657",
+    "L4": "#6b5fb9",
+    "L5": "#3d95ad",
+    "L6": "#d1781c",
+    "L7": "#8da4ca",
+    "L8": "#c47a9b",
 }
 
-# ---------- Plot ----------
-
-
+#%% Plot function
 def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
-    # color for target norm
-    target_color = default_colors.get(norm_label, "black")
+    # color for target norm (use base name before "-")
+    base_name = norm_label.split('-')[0]
+    target_color = default_colors.get(base_name, "black")
 
     # Node positions
     P_Target = (0.0, 1.0)
-    P_ALLD   = (-1.20, -0.72)
-    P_ALLC   = (1.20, -0.72)
-    R = 0.40
+    P_ALLD   = (-1.20, -0.9)
+    P_ALLC   = (1.20, -0.9)
+    R = 0.50
 
     fig, ax = plt.subplots(figsize=(5.4, 5.0), dpi=150)
     ax.set_aspect("equal")
@@ -137,15 +116,15 @@ def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
         )
         if where == "top":
             ax.text(
-                x, y + R + 0.15, name,
+                x, y + R + 0.08, name,
                 ha="center", va="bottom",
-                fontsize=13, color="black", zorder=4,
+                fontsize=18, color="black", zorder=4,
             )
         else:
             ax.text(
-                x, y - R - 0.15, name,
+                x, y - R - 0.08, name,
                 ha="center", va="top",
-                fontsize=13, color="black", zorder=4,
+                fontsize=18, color="black", zorder=4,
             )
 
     gray = "#bdbdbd"
@@ -154,7 +133,7 @@ def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
     place_node("ALLD", P_ALLD, gray, gray, "black", fmt_pct1(eq[2]), "bottom")
     place_node("ALLC", P_ALLC, "white", gray, "black", fmt_pct1(eq[1]), "bottom")
 
-    def edge_arrow_with_label(p1, p2, value, rad, text_offset=0.18, ms=12, lw=1.3):
+    def edge_arrow_with_label(p1, p2, value, rad, text_offset=0.18, ms=18, lw=1.3):
         a = FancyArrowPatch(
             p1, p2,
             connectionstyle=f"arc3,rad={rad}",
@@ -162,9 +141,9 @@ def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
             mutation_scale=ms,
             linewidth=lw,
             color="black",
-            shrinkA=26,
-            shrinkB=26,
-            zorder=2,
+            shrinkA=37,
+            shrinkB=37,
+            zorder=4,
         )
         ax.add_patch(a)
 
@@ -196,7 +175,7 @@ def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
 
     if outpath is not None:
         outpath.parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(outpath, dpi=150)
+        fig.savefig(outpath, dpi=150, bbox_inches='tight', pad_inches=0.02)
         print(f"Saved: {outpath}")
 
     if show:
@@ -204,42 +183,52 @@ def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
 
     plt.close(fig)
 
-# ---------- Main ----------
+#%% Parameters
+# Edit these parameters
+norms_to_plot = ["L6"]  # Add more norms as needed: ["L1", "L6", "L6-IS", etc.]
+build_dir = "cmake-build-release"
+params_json = '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":1.0,"mu_assess1":0.02,"mu_assess2":0.02,"mu_impl":0.02,"mu_percept":0.0,"seed":123456789}'
+save_figure = True
+show_figure = True
+output_format = "pdf"  # png, pdf, or svg
 
-def main():
-    parser = argparse.ArgumentParser(description="Draw triadic competition diagrams for given norms.")
-    parser.add_argument("--norms", nargs="+", required=True,
-                        help="Norm strings (e.g., L1, L6-IS, AllD, 0xHEX, or Rd-Rr-P).")
-    parser.add_argument("--build-dir", default=str(EPRG_DEFAULT.parent),
-                        help="Directory containing inspect_EvolPrivRepGame (default: cmake-build-release).")
-    parser.add_argument("--params", default=None,
-                        help="JSON string or path to JSON for -j (t_init, t_measure, q, mus, seed...).")
-    parser.add_argument("--save", action="store_true", help="Save figures to figures/triad_<norm>.<format>")
-    parser.add_argument("--format", choices=["png", "pdf", "svg"], default="png",
-                        help="Output image format when --save is set (default: png)")
-    parser.add_argument("--no-show", action="store_true", help="Do not open windows")
-    args = parser.parse_args()
+#%% Check executable
+exe = ROOT / build_dir / "inspect_EvolPrivRepGame"
+if not exe.exists():
+    print(f"[ERROR] executable not found: {exe}")
 
-    # Make cwd stable (repo root)
-    os.chdir(ROOT)
+#%% Run simulations
+results = {}
+if exe.exists():
+    for norm in norms_to_plot:
+        print(f"[INFO] Running simulation for {norm}...")
+        eq, rhos = run_and_parse(exe, norm, params_json)
+        results[norm] = (eq, rhos)
+    print(f"[INFO] Completed {len(results)} simulations")
 
-    exe = Path(args.build_dir) / "inspect_EvolPrivRepGame"
-    if not exe.exists():
-        sys.exit(f"[ERROR] executable not found: {exe}")
+#%% Plot results
+for norm, (eq, rhos) in results.items():
+    # Add "-base" suffix if norm doesn't contain "-"
+    display_name = norm if "-" in norm else f"{norm}-base"
+    outpath = (ROOT / "script" / "figures" / f"triad_{norm}.{output_format}") if save_figure else None
+    draw_triad(display_name, eq, rhos, outpath=outpath, show=show_figure)
 
-    # Prepare -j payload (inline JSON string)
-    j_arg = None
-    if args.params:
-        if os.path.exists(args.params):
-            with open(args.params) as f:
-                j_arg = f.read()
-        else:
-            j_arg = args.params
+#%% Plot all norms
+all_norms = ["L1", "L1-IS", "L1v", "L1v-IS", "L2", "L2-IS", "L2v", "L2v-IS", 
+             "L3", "L3-IS", "L4", "L4-IS", "L5", "L5-IS", "L6", "L6-IS", 
+             "L7", "L7-IS", "L8", "L8-IS"]
 
-    for norm in args.norms:
-        eq, rhos = run_and_parse(exe, norm, j_arg)
-        outpath = (ROOT / "figures" / f"triad_{norm}.{args.format}") if args.save else None
-        draw_triad(norm, eq, rhos, outpath=outpath, show=(not args.no_show))
+for norm in all_norms:
+    try:
+        print(f"[INFO] Processing {norm}...")
+        eq, rhos = run_and_parse(exe, norm, params_json)
+        # Add "-base" suffix if norm doesn't contain "-"
+        display_name = norm if "-" in norm else f"{norm}-base"
+        outpath = (ROOT / "script" / "figures" / f"triad_{norm}.{output_format}") if save_figure else None
+        draw_triad(display_name, eq, rhos, outpath=outpath, show=False)
+    except Exception as e:
+        print(f"[WARNING] Failed to process {norm}: {e}")
 
-if __name__ == "__main__":
-    main()
+print("[INFO] All plots completed")
+
+# %%

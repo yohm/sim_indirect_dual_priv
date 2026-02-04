@@ -236,18 +236,18 @@ fig,ax = plot_bc_range(norm1+"-base", norm2, bc_range1, bc_range2)
 fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
 
 # %%
-def run_and_plot_all(norm1: str, norm2: str, params: dict, fig: plt.Figure = plt.figure()):
+def run_and_plot_all(norm1: str, norm2: str, params: dict):
     coop1, coop2, bc_range1, bc_range2 = run_compare(norm1, norm2, params)
 
-    fig.clf()
     print(f"[INFO] Creating self cooperation level plot...")
     fig, ax = plot_cooperation_level(norm1+"-base", norm2, coop1, coop2)
     fig.savefig(f"figures/pc_{norm1}_vs_{norm2}.pdf")
+    plt.close(fig)
 
-    fig.clf()
     print(f"[INFO] Creating b/c range plot...")
-    fig,ax = plot_bc_range(norm1+"-base", norm2, bc_range1, bc_range2)
+    fig, ax = plot_bc_range(norm1+"-base", norm2, bc_range1, bc_range2)
     fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
+    plt.close(fig)
 
 # %%
 run_and_plot_all("L1", "L1-IS", PARAMS)
