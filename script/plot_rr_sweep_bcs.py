@@ -99,9 +99,9 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
               labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
   
   if norm:
-    ax.set_title(norm, fontsize=32)
+    ax.set_title(norm, fontsize=32, pad=20)
   
-  fig.subplots_adjust(left=0.13, right=0.95, top=0.91, bottom=0.17)
+  fig.subplots_adjust(left=0.13, right=0.95, top=0.85, bottom=0.17)
   return fig, ax
 
 

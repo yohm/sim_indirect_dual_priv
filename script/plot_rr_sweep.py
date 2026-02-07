@@ -73,13 +73,13 @@ def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int], norm: str = 
   
   # Set title if norm is provided
   if norm:
-    ax.set_title(norm, fontsize=32)
+    ax.set_title(norm, fontsize=32, pad=20)
   
   # Remove top and right spines
   ax.spines['top'].set_visible(False)
   ax.spines['right'].set_visible(False)
   
-  fig.subplots_adjust(left=0.18, right=0.97, top=0.91, bottom=0.17)
+  fig.subplots_adjust(left=0.18, right=0.97, top=0.85, bottom=0.17)
   return fig, ax
 
 #%% Parameters
