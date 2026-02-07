@@ -54,9 +54,6 @@ for i, (norm, img) in enumerate(zip(norms, images)):
                 ha='center', va='center', fontsize=16)
     
     ax.axis('off')
-    # Add panel label
-    ax.text(0.02, 0.98, f"({chr(97 + i)})", transform=ax.transAxes,
-            fontsize=20, fontweight='bold', va='top', ha='left')
 
 plt.tight_layout(pad=0.5)
 
@@ -105,9 +102,6 @@ for i, (norm, img) in enumerate(zip(norms_other, images_other)):
                 ha='center', va='center', fontsize=16)
     
     ax.axis('off')
-    # Add panel label
-    ax.text(0.02, 0.98, f"({chr(97 + i)})", transform=ax.transAxes,
-            fontsize=20, fontweight='bold', va='top', ha='left')
 
 plt.tight_layout(pad=0.5)
 
