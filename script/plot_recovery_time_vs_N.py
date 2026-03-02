@@ -158,7 +158,6 @@ if OUTPUT_PATH:
     out_dir = os.path.dirname(OUTPUT_PATH)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    fig.tight_layout()
     fig.savefig(OUTPUT_PATH, dpi=200)
     print(f"[Info] Plot saved to {OUTPUT_PATH}")
 
@@ -281,7 +280,7 @@ norm_colors.update(_make_class_colors(TYPE2_BASE_NORMS, "YlGn"))
 norm_colors.update(_make_class_colors(TYPE3_BASE_NORMS, "Purples"))
 
 plt.clf()
-fig, ax = plt.subplots(figsize=(6, 5))
+fig, ax = plt.subplots(figsize=(6, 4))
 for norm, result in multi_norm_results.items():
     if norm in TYPEV_IS_NORMS:
         continue
@@ -302,21 +301,21 @@ for norm, result in multi_norm_results.items():
 # Type labels inside plot area (adjust x/y as needed)
 ax.text(0.96, 0.10, "Type I-IS", transform=ax.transAxes,
     color=norm_colors.get(TYPE1_IS_NORMS[-1], "black"),
-    fontsize=12, fontweight="bold", va="top", ha="right")
+    fontsize=12, va="top", ha="right")
 ax.text(0.96, 0.23, "Type I-base\nType II-IS, Type III-IS", transform=ax.transAxes,
     color=norm_colors.get(TYPE2_IS_NORMS[-1], "black"),
-    fontsize=12, fontweight="bold", va="bottom", ha="right")
-ax.text(0.96, 0.47, "Type II-base", transform=ax.transAxes,
+    fontsize=12, va="bottom", ha="right")
+ax.text(0.96, 0.49, "Type II-base", transform=ax.transAxes,
     color=norm_colors.get(TYPE2_BASE_NORMS[-1], "black"),
-    fontsize=12, fontweight="bold", va="top", ha="right")
+    fontsize=12, va="top", ha="right")
 ax.text(0.91, 0.95, "Type III-base", transform=ax.transAxes,
     color=norm_colors.get(TYPE3_BASE_NORMS[-1], "black"),
-    fontsize=12, fontweight="bold", va="top", ha="right")
+    fontsize=12, va="top", ha="right")
 
-ax.set_xlabel("Population size N", fontsize=30)
-ax.set_ylabel("Recovery time", fontsize=30)
+ax.set_xlabel("population size N", fontsize=20)
+ax.set_ylabel("recovery time", fontsize=20)
 ax.set_xlim(left=0)
-ax.tick_params(axis="both", labelsize=20)
+ax.tick_params(axis="both", labelsize=16)
 ax.grid(True, linestyle=":", alpha=0.5)
 # ax.set_title("Recovery time vs N for multiple norms", fontsize=32, pad=20)
 # ax.legend(
@@ -329,14 +328,13 @@ ax.grid(True, linestyle=":", alpha=0.5)
 # )
 ax.spines["top"].set_visible(False)
 ax.spines["right"].set_visible(False)
-fig.subplots_adjust(left=0.18, right=0.97, top=0.85, bottom=0.17)
+fig.subplots_adjust(left=0.18, right=0.93, top=0.96, bottom=0.15)
 
 if MULTI_OUTPUT_PATH:
     out_dir = os.path.dirname(MULTI_OUTPUT_PATH)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    fig.tight_layout()
-    fig.savefig(MULTI_OUTPUT_PATH, dpi=200)
+    fig.savefig(MULTI_OUTPUT_PATH, dpi=200, bbox_inches="tight", pad_inches=0.02)
     print(f"[Info] Multi-norm plot saved to {MULTI_OUTPUT_PATH}")
 
 if MULTI_SHOW_PLOT:
