@@ -89,7 +89,7 @@ MIN_N = 2
 MAX_N = 100
 STEP = 1
 NUM_SAMPLES = 100000
-MAX_T = 100000
+MAX_T = 10000
 SEED = 123456789
 BUILD_DIR = "../cmake-build-release"
 EXE_PATH = os.path.join(BUILD_DIR, "main_RecoveryAnalysis")
@@ -169,15 +169,16 @@ else:
 
 # %%
 # MULTI-NORM CONFIG (edit and re-run this cell)
-NORMS_TO_SWEEP = [f"L{i}-IS" for i in range(1, 9)] + ["L1v-IS", "L2v-IS"]
-MULTI_MIN_N = MIN_N
-MULTI_MAX_N = MAX_N
-MULTI_STEP = STEP
-MULTI_NUM_SAMPLES = NUM_SAMPLES
-MULTI_MAX_T = MAX_T
+# NORMS_TO_SWEEP = ["L6", "L8"]
+NORMS_TO_SWEEP = [f"L{i}" for i in range(1, 9)] + [f"L{i}-IS" for i in range(1, 9)] + ["L1v-IS", "L2v-IS"]
+MULTI_MIN_N = 10
+MULTI_MAX_N = 200
+MULTI_STEP = 10
+MULTI_NUM_SAMPLES = 100000
+MULTI_MAX_T = 1000000
 MULTI_SEED = SEED
 MULTI_EXE_PATH = EXE_PATH
-MULTI_OUTPUT_PATH = None  # e.g., "figures/recovery_time_vs_N_multi.png"
+MULTI_OUTPUT_PATH = "figures/recovery_time_vs_N_multi.pdf"
 MULTI_RESULTS_PATH = "data/recovery_time_vs_N_multi.tsv"  # set to None to skip saving/loading
 MULTI_SHOW_PLOT = True
 
@@ -253,24 +254,82 @@ if MULTI_RESULTS_PATH and os.path.exists(MULTI_RESULTS_PATH):
 if not multi_norm_results:
     raise RuntimeError("Run the multi-norm sweep cell first to populate results.")
 
+TYPE1_IS_NORMS = ["L1-IS", "L3-IS", "L4-IS", "L7-IS"]
+TYPE2_IS_NORMS = ["L2-IS", "L5-IS", "L6-IS", "L8-IS"]
+TYPEV_IS_NORMS = ["L1v-IS", "L2v-IS"]
+
+TYPE1_BASE_NORMS = ["L1", "L3", "L4", "L7"]
+TYPE2_BASE_NORMS = ["L2", "L5"]
+TYPE3_BASE_NORMS = ["L6", "L8"]
+
+
+def _make_class_colors(norms: List[str], cmap_name: str) -> Dict[str, Tuple[float, float, float, float]]:
+    cmap = plt.get_cmap(cmap_name)
+    if not norms:
+        return {}
+    if len(norms) == 1:
+        return {norms[0]: cmap(0.75)}
+    shades = np.linspace(0.45, 0.9, len(norms))
+    return {norm: cmap(shade) for norm, shade in zip(norms, shades)}
+
+
+norm_colors: Dict[str, Tuple[float, float, float, float]] = {}
+norm_colors.update(_make_class_colors(TYPE1_IS_NORMS, "Blues"))
+norm_colors.update(_make_class_colors(TYPE2_IS_NORMS, "Reds"))
+norm_colors.update(_make_class_colors(TYPE1_BASE_NORMS, "Oranges"))
+norm_colors.update(_make_class_colors(TYPE2_BASE_NORMS, "YlGn"))
+norm_colors.update(_make_class_colors(TYPE3_BASE_NORMS, "Purples"))
+
 plt.clf()
-fig, ax = plt.subplots(figsize=(9, 5.5))
+fig, ax = plt.subplots(figsize=(6, 5))
 for norm, result in multi_norm_results.items():
+    if norm in TYPEV_IS_NORMS:
+        continue
+    line_color = norm_colors.get(norm, "tab:gray")
     ax.errorbar(
         result["N"],
         result["avg"],
         yerr=result["err"],
         fmt="-o",
+        color=line_color,
+        ecolor=line_color,
         markersize=3,
         capsize=2,
         alpha=0.85,
         label=norm,
     )
 
-ax.set_xlabel("Population size N")
-ax.set_ylabel("Average recovery time")
-ax.set_title("Recovery time vs N for multiple norms")
-ax.legend(ncol=2)
+# Type labels inside plot area (adjust x/y as needed)
+ax.text(0.96, 0.10, "Type I-IS", transform=ax.transAxes,
+    color=norm_colors.get(TYPE1_IS_NORMS[-1], "black"),
+    fontsize=12, fontweight="bold", va="top", ha="right")
+ax.text(0.96, 0.23, "Type I-base\nType II-IS, Type III-IS", transform=ax.transAxes,
+    color=norm_colors.get(TYPE2_IS_NORMS[-1], "black"),
+    fontsize=12, fontweight="bold", va="bottom", ha="right")
+ax.text(0.96, 0.47, "Type II-base", transform=ax.transAxes,
+    color=norm_colors.get(TYPE2_BASE_NORMS[-1], "black"),
+    fontsize=12, fontweight="bold", va="top", ha="right")
+ax.text(0.91, 0.95, "Type III-base", transform=ax.transAxes,
+    color=norm_colors.get(TYPE3_BASE_NORMS[-1], "black"),
+    fontsize=12, fontweight="bold", va="top", ha="right")
+
+ax.set_xlabel("Population size N", fontsize=30)
+ax.set_ylabel("Recovery time", fontsize=30)
+ax.set_xlim(left=0)
+ax.tick_params(axis="both", labelsize=20)
+ax.grid(True, linestyle=":", alpha=0.5)
+# ax.set_title("Recovery time vs N for multiple norms", fontsize=32, pad=20)
+# ax.legend(
+#     frameon=True,
+#     fontsize=24,
+#     loc="center right",
+#     labelspacing=0.3,
+#     handletextpad=0.5,
+#     borderpad=0.4,
+# )
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+fig.subplots_adjust(left=0.18, right=0.97, top=0.85, bottom=0.17)
 
 if MULTI_OUTPUT_PATH:
     out_dir = os.path.dirname(MULTI_OUTPUT_PATH)
