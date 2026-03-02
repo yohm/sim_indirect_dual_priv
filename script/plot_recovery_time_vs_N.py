@@ -315,7 +315,8 @@ ax.text(0.91, 0.95, "Type III-base", transform=ax.transAxes,
 ax.set_xlabel("population size N", fontsize=20)
 ax.set_ylabel("recovery time", fontsize=20)
 ax.set_xlim(left=0)
-ax.tick_params(axis="both", labelsize=16)
+ax.tick_params(axis="x", labelsize=13)
+ax.tick_params(axis="y", labelsize=12)
 ax.grid(True, linestyle=":", alpha=0.5)
 # ax.set_title("Recovery time vs N for multiple norms", fontsize=32, pad=20)
 # ax.legend(
@@ -334,7 +335,7 @@ if MULTI_OUTPUT_PATH:
     out_dir = os.path.dirname(MULTI_OUTPUT_PATH)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
-    fig.savefig(MULTI_OUTPUT_PATH, dpi=200, bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(MULTI_OUTPUT_PATH, bbox_inches="tight", pad_inches=0.1)
     print(f"[Info] Multi-norm plot saved to {MULTI_OUTPUT_PATH}")
 
 if MULTI_SHOW_PLOT:
