@@ -61,12 +61,13 @@ def collect_recovery_stats(cfg: SweepConfig) -> Tuple[List[int], np.ndarray, np.
     recoveries: List[int] = []
 
     print(f"[Info] Sweeping N from {cfg.min_N} to {cfg.max_N} (step {cfg.step}) for norm {cfg.norm}")
-    for N in n_values:
+    for idx, N in enumerate(n_values):
+        iter_seed = cfg.seed + idx * 1234
         params = {
             "N": N,
             "max_t": cfg.max_t,
             "num_samples": cfg.num_samples,
-            "_seed": cfg.seed,
+            "_seed": iter_seed,
         }
         result = run_recovery_sample(cfg.exe_path, cfg.norm, params)
         avg = result.get("avg_recovery_time")
@@ -184,7 +185,8 @@ MULTI_SHOW_PLOT = True
 # %%
 # MULTI-NORM SWEEP
 multi_norm_results = {}
-for norm in NORMS_TO_SWEEP:
+for norm_idx, norm in enumerate(NORMS_TO_SWEEP):
+    norm_seed = MULTI_SEED + norm_idx * 56789
     multi_cfg = SweepConfig(
         norm=norm,
         min_N=MULTI_MIN_N,
@@ -192,7 +194,7 @@ for norm in NORMS_TO_SWEEP:
         step=MULTI_STEP,
         num_samples=MULTI_NUM_SAMPLES,
         max_t=MULTI_MAX_T,
-        seed=MULTI_SEED,
+        seed=norm_seed,
         exe_path=MULTI_EXE_PATH,
     )
     (
