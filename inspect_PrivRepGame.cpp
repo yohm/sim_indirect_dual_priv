@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
   }
 
   // set default parameters
-  const nlohmann::json default_params = { {"t_init", 1e3}, {"t_measure", 1e3}, {"q", 1.0}, {"mu_impl", 0.0}, {"mu_percept", 0.0}, {"mu_assess1", 0.05}, {"mu_assess2", 0.0}, {"seed", 123456789ull} };
+  const nlohmann::json default_params = { {"t_init", 1e3}, {"t_measure", 1e3}, {"q", 1.0}, {"mu_impl", 0.0}, {"mu_percept", 0.0}, {"mu_assess1", 0.05}, {"mu_assess2", 0.0}, {"_seed", 123456789ull} };
   try {
     CliJsonUtils::ValidateObjectKeys(params, CliJsonUtils::JsonKeys(default_params));
     CliJsonUtils::ApplyJsonDefaults(params, default_params);
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
       pop.emplace_back(norm, size);
     }
 
-    PrivateRepGame prg(pop, params["seed"].get<uint64_t>());
+    PrivateRepGame prg(pop, params["_seed"].get<uint64_t>());
     PrintInitialTimeSeries(prg, params, std::cerr);
 
     if (params.at("t_measure").get<size_t>() > 0) {

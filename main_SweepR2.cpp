@@ -132,7 +132,7 @@ SimulationConfig BuildSimulationConfig(const ProgramOptions& opt) {
   }
   cfg.params = for_params.get<EvolPrivRepGame::Parameters>();
   if (raw.is_object() && raw.contains("_seed")) {
-    cfg.params.seed = raw.at("_seed").get<uint64_t>();
+    cfg.params._seed = raw.at("_seed").get<uint64_t>();
   }
 
   if (cfg.params.N < 2) {
@@ -170,7 +170,7 @@ std::vector<std::vector<double>> RunPrivRepSimulation(const PrivateRepGame::popu
     throw std::runtime_error("population size mismatch with parameters.N");
   }
 
-  PrivateRepGame game(pop, params.seed + seed_offset);
+  PrivateRepGame game(pop, params._seed + seed_offset);
   game.Update(params.t_init, params.q, params.mu_impl, params.mu_percept, params.mu_assess1, params.mu_assess2, count_good);
   game.ResetCounts();
   game.Update(params.t_measure, params.q, params.mu_impl, params.mu_percept, params.mu_assess1, params.mu_assess2, count_good);

@@ -88,7 +88,7 @@ EvolPrivRepGame::Parameters BuildParameters(const nlohmann::json& overrides) {
     if (overrides.contains("mu_percept")) { params.mu_percept = overrides.at("mu_percept").get<double>(); }
     if (overrides.contains("mu_assess1")) { params.mu_assess1 = overrides.at("mu_assess1").get<double>(); }
     if (overrides.contains("mu_assess2")) { params.mu_assess2 = overrides.at("mu_assess2").get<double>(); }
-    if (overrides.contains("_seed")) { params.seed = overrides.at("_seed").get<uint64_t>(); }
+    if (overrides.contains("_seed")) { params._seed = overrides.at("_seed").get<uint64_t>(); }
   }
   if (params.N < 2) {
     throw std::runtime_error("population size N must be >= 2");
@@ -111,9 +111,9 @@ std::vector<std::vector<double>> RunPrivRepSimulation(const PrivateRepGame::popu
   }
 
   EvolPrivRepGame::Parameters params = base_params;
-  params.seed += seed_offset;
+  params._seed += seed_offset;
 
-  PrivateRepGame game(pop, params.seed);
+  PrivateRepGame game(pop, params._seed);
   game.Update(params.t_init, params.q, params.mu_impl, params.mu_percept, params.mu_assess1, params.mu_assess2, false);
   game.ResetCounts();
   game.Update(params.t_measure, params.q, params.mu_impl, params.mu_percept, params.mu_assess1, params.mu_assess2, false);
@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
 
       if (idx < active_count) {
         EvolPrivRepGame::Parameters mono_params = params;
-        mono_params.seed += static_cast<uint64_t>(idx * 2);
+        mono_params._seed += static_cast<uint64_t>(idx * 2);
         packed.self_coop = EvolPrivRepGame::MonomorphicCooperationLevel(candidate, mono_params);
 
         PrivateRepGame::population_t pop = {{candidate, params.N - 1}, {alld, 1}};

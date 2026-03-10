@@ -22,7 +22,7 @@ struct RecoveryParams {
   size_t N;
   size_t max_t;
   size_t num_samples;
-  uint64_t seed;
+  uint64_t _seed;
 };
 
 size_t Index(size_t observer, size_t target, size_t N) {
@@ -121,7 +121,7 @@ RecoveryParams LoadParams(const nlohmann::json &params_json) {
   params.N = params_json.at("N").get<size_t>();
   params.max_t = params_json.at("max_t").get<size_t>();
   params.num_samples = params_json.at("num_samples").get<size_t>();
-  params.seed = params_json.at("_seed").get<uint64_t>();
+  params._seed = params_json.at("_seed").get<uint64_t>();
 
   if (params.N < 2) {
     throw std::runtime_error("N must be at least 2");
@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
       local_successes.reserve(parsed_params.num_samples / omp_get_num_threads() + 1);
 #pragma omp for schedule(static)
       for (size_t sample = 0; sample < parsed_params.num_samples; ++sample) {
-        uint64_t sample_seed = parsed_params.seed + sample * 7919ull;
+        uint64_t sample_seed = parsed_params._seed + sample * 7919ull;
         auto recovery_time = RunRecoverySample(norm, parsed_params, sample_seed);
         if (recovery_time) {
           local_successes.push_back(*recovery_time);
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
     }
 #else
     for (size_t sample = 0; sample < parsed_params.num_samples; ++sample) {
-      uint64_t sample_seed = parsed_params.seed + sample * 7919ull;
+      uint64_t sample_seed = parsed_params._seed + sample * 7919ull;
       auto recovery_time = RunRecoverySample(norm, parsed_params, sample_seed);
       if (recovery_time) {
         successes.push_back(*recovery_time);

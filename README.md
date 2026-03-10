@@ -126,7 +126,7 @@ Default parameters:
   "mu_percept": 0.0,
   "mu_assess1": 0.05,
   "mu_assess2": 0.0,
-  "seed": 123456789
+  "_seed": 123456789
 }
 ```
 

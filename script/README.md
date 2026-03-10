@@ -158,7 +158,7 @@ python script/plot_resident_mutant_payoff.py \
   --N 50 \
   --points 51 \
   --build-dir cmake-build-release \
-  --params '{"t_init":1000,"t_measure":1000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.0,"mu_percept":0.0,"seed":123456789}' \
+  --params '{"t_init":1000,"t_measure":1000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.0,"mu_percept":0.0,"_seed":123456789}' \
   --save \
   --format pdf \
   --no-show

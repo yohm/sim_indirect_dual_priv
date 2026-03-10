@@ -12,17 +12,17 @@
 class EvolPrivRepGame {
 public:
   struct Parameters {
-    Parameters() : N(30), t_init(1e3), t_measure(1e3), q(1.0), mu_impl(0.0), mu_percept(0.0), mu_assess1(0.05), mu_assess2(0.0), seed(123456789ull) {};
+    Parameters() : N(30), t_init(1e3), t_measure(1e3), q(1.0), mu_impl(0.0), mu_percept(0.0), mu_assess1(0.05), mu_assess2(0.0), _seed(123456789ull) {};
     Parameters(size_t N, size_t t_init, size_t t_measure, double q, double mu_impl, double mu_percept, double mu_assess1, double mu_assess2, uint64_t seed) :
-        N(N), t_init(t_init), t_measure(t_measure), q(q), mu_impl(mu_impl), mu_percept(mu_percept), mu_assess1(mu_assess1), mu_assess2(mu_assess2), seed(seed) {};
+        N(N), t_init(t_init), t_measure(t_measure), q(q), mu_impl(mu_impl), mu_percept(mu_percept), mu_assess1(mu_assess1), mu_assess2(mu_assess2), _seed(seed) {};
     size_t N;  // population size
     size_t t_init, t_measure;  // simulation durations
     double q;  // observation probability
     double mu_impl;  // implementation error probability
     double mu_percept;  // perception error probability
     double mu_assess1, mu_assess2;  // assessment error probability
-    uint64_t seed;  // random number seed
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Parameters, N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, seed);
+    uint64_t _seed;  // random number seed
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Parameters, N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, _seed);
   };
 
   using norms_t = std::vector<Norm>;
@@ -45,7 +45,7 @@ public:
 
   // cooperation probability of mono-morphic population
   static double MonomorphicCooperationLevel(const Norm& norm, const Parameters& param) {
-    PrivateRepGame game({{norm, param.N}}, param.seed);
+    PrivateRepGame game({{norm, param.N}}, param._seed);
     game.Update(param.t_init, param.q, param.mu_impl, param.mu_percept, param.mu_assess1, param.mu_assess2, false);
     game.ResetCounts();
     game.Update(param.t_measure, param.q, param.mu_impl, param.mu_percept, param.mu_assess1, param.mu_assess2, false);
@@ -60,7 +60,7 @@ public:
     double benefit_prob, cost_prob;
   };
   static std::pair<benefit_cost_prob_t, benefit_cost_prob_t> BenefitCostProbs(const Norm& str_i, size_t ni, const Norm& str_j, const Parameters& param) {
-    PrivateRepGame game({{str_i, ni}, {str_j, param.N - ni}}, param.seed);
+    PrivateRepGame game({{str_i, ni}, {str_j, param.N - ni}}, param._seed);
     game.Update(param.t_init, param.q, param.mu_impl, param.mu_percept, param.mu_assess1, param.mu_assess2, false);
     game.ResetCounts();
     game.Update(param.t_measure, param.q, param.mu_impl, param.mu_percept, param.mu_assess1, param.mu_assess2, false);
@@ -125,7 +125,7 @@ public:
     #pragma omp parallel for schedule(dynamic) default(none), shared(pi_i, pi_j, norm_i, norm_j, param, benefit, beta, N)
     for (size_t l = 1; l < N; l++) {
       Parameters param_l = param;
-      param_l.seed += l;
+      param_l._seed += l;
       auto bc_probs = BenefitCostProbs(norm_i, N - l, norm_j, param_l);
       pi_i[l] = benefit * bc_probs.first.benefit_prob - bc_probs.first.cost_prob;
       pi_j[l] = benefit * bc_probs.second.benefit_prob - bc_probs.second.cost_prob;
@@ -151,7 +151,7 @@ public:
     #pragma omp parallel for schedule(dynamic) default(none), shared(i_benefit_probs, i_cost_probs, j_benefit_probs, j_cost_probs, norm_i, norm_j, param, benefit_sigma_in_pairs, N)
     for (size_t l = 1; l < N; l++) {
       Parameters param_l = param;
-      param_l.seed += l;
+      param_l._seed += l;
       auto bc_probs = BenefitCostProbs(norm_i, N - l, norm_j, param_l);
       i_benefit_probs[l] = bc_probs.first.benefit_prob;
       i_cost_probs[l] = bc_probs.first.cost_prob;
