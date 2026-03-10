@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <chrono>
 #include <regex>
 #include <vector>
@@ -9,6 +8,7 @@
 #include <cmath>
 #include <icecream.hpp>
 #include <nlohmann/json.hpp>
+#include "CliJsonUtils.hpp"
 #include "PrivRepGame.hpp"
 
 
@@ -44,19 +44,10 @@ int main(int argc, char *argv[]) {
   bool count_good = false;
   // -j param.json : set parameters by json file or json string
   for (int i = 1; i < argc; ++i) {
-    if (std::string(argv[i]) == "-j" && i + 1 < argc) {
-      std::ifstream fin(argv[++i]);
-      // check if file exists
-      if (fin) {
-        fin >> params;
-        fin.close();
-      }
-      else {
-        std::istringstream iss(argv[i]);
-        iss >> params;
-      }
+    if (CliJsonUtils::ConsumeJsonOption(argc, argv, i, "-j", params)) {
+      continue;
     }
-    else if (std::string(argv[i]) == "-g") {
+    if (std::string(argv[i]) == "-g") {
       count_good = true;
     }
     else {
@@ -66,18 +57,13 @@ int main(int argc, char *argv[]) {
 
   // set default parameters
   const nlohmann::json default_params = { {"t_init", 1e3}, {"t_measure", 1e3}, {"q", 1.0}, {"mu_impl", 0.0}, {"mu_percept", 0.0}, {"mu_assess1", 0.05}, {"mu_assess2", 0.0}, {"seed", 123456789ull} };
-  for (auto it = default_params.begin(); it != default_params.end(); ++it) {
-    if (!params.contains(it.key())) {
-      params[it.key()] = it.value();
-    }
+  try {
+    CliJsonUtils::ValidateObjectKeys(params, CliJsonUtils::JsonKeys(default_params));
+    CliJsonUtils::ApplyJsonDefaults(params, default_params);
   }
-
-  // if params has keys other than default_params, print them
-  for (auto it = params.begin(); it != params.end(); ++it) {
-    if (!default_params.contains(it.key())) {
-      std::cerr << "[Error] unknown parameter: " << it.key() << std::endl;
-      return 1;
-    }
+  catch (const std::exception& e) {
+    std::cerr << "[Error] " << e.what() << std::endl;
+    return 1;
   }
 
   std::cerr << "Parameters:" << std::endl;
@@ -87,7 +73,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "Usage: " << argv[0] << " [-j param.json] norm1 size1 [norm2 size2 ...]" << std::endl;
     std::cerr << "Default parameters:" << std::endl;
     std::cerr << "  " << default_params.dump(2) << std::endl;
-    std::cerr << "Norm format: [Norm name] or [ID] or [0xHEX_ID] or [Rd-Rr-P] or [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]" << std::endl;
+    std::cerr << "Norm format: " << CliJsonUtils::NormFormatHelp() << std::endl;
   };
 
   auto start = std::chrono::high_resolution_clock::now();

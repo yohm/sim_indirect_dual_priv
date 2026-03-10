@@ -15,6 +15,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "CliJsonUtils.hpp"
 #include "Norm.hpp"
 #include "PrivRepGame.hpp"
 #include "EvolPrivRepGame.hpp"
@@ -110,34 +111,18 @@ ProgramOptions ParseArgs(int argc, char** argv) {
   return opt;
 }
 
-nlohmann::json LoadJsonFromArg(const std::string& raw) {
-  std::ifstream fin(raw);
-  if (fin) {
-    nlohmann::json j;
-    fin >> j;
-    return j;
-  }
-  return nlohmann::json::parse(raw);
-}
-
 SimulationConfig BuildSimulationConfig(const ProgramOptions& opt) {
   SimulationConfig cfg;
   nlohmann::json raw = nlohmann::json::object();
   if (opt.params_arg.has_value()) {
-    raw = LoadJsonFromArg(opt.params_arg.value());
-  }
-
-  if (!raw.is_null() && !raw.is_object()) {
-    throw std::runtime_error("--params must be a JSON object");
+    raw = CliJsonUtils::LoadJsonFromFileOrString(opt.params_arg.value());
   }
 
   if (raw.is_object()) {
-    std::set<std::string> allowed = {"N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "_seed", "benefit", "beta", "base_norm"};
-    for (const auto& item : raw.items()) {
-      if (!allowed.count(item.key())) {
-        throw std::runtime_error("unknown parameter key: " + item.key());
-      }
-    }
+    CliJsonUtils::ValidateObjectKeys(raw, {"N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "_seed", "benefit", "beta", "base_norm"});
+  }
+  else if (!raw.is_null()) {
+    throw std::runtime_error("--params must be a JSON object");
   }
 
   nlohmann::json for_params = raw.is_null() ? nlohmann::json::object() : raw;

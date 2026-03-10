@@ -15,6 +15,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "CliJsonUtils.hpp"
 #include "Norm.hpp"
 
 struct RecoveryParams {
@@ -140,14 +141,8 @@ int main(int argc, char *argv[]) {
 
   for (int i = 1; i < argc; ++i) {
     std::string current(argv[i]);
-    if (current == "-j" && i + 1 < argc) {
-      std::ifstream fin(argv[++i]);
-      if (fin) {
-        fin >> params;
-      } else {
-        std::istringstream iss(argv[i]);
-        iss >> params;
-      }
+    if (CliJsonUtils::ConsumeJsonOption(argc, argv, i, "-j", params)) {
+      continue;
     } else {
       args.emplace(current);
     }
@@ -160,17 +155,13 @@ int main(int argc, char *argv[]) {
     {"_seed", 123456789ull}
   };
 
-  for (auto it = default_params.begin(); it != default_params.end(); ++it) {
-    if (!params.contains(it.key())) {
-      params[it.key()] = it.value();
-    }
+  try {
+    CliJsonUtils::ValidateObjectKeys(params, CliJsonUtils::JsonKeys(default_params));
+    CliJsonUtils::ApplyJsonDefaults(params, default_params);
   }
-
-  for (auto it = params.begin(); it != params.end(); ++it) {
-    if (!default_params.contains(it.key())) {
-      std::cerr << "[Error] unknown parameter: " << it.key() << std::endl;
-      return 1;
-    }
+  catch (const std::exception& e) {
+    std::cerr << "[Error] " << e.what() << std::endl;
+    return 1;
   }
 
   if (args.size() != 1) {

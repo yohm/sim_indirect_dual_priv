@@ -13,6 +13,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "CliJsonUtils.hpp"
 #include "EvolPrivRepGame.hpp"
 #include "PrivRepGame.hpp"
 #include "Norm.hpp"
@@ -41,16 +42,6 @@ void PrintUsage(const char* exe) {
   std::cerr << "  N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, _seed\n";
 }
 
-nlohmann::json LoadJsonArg(const std::string& raw) {
-  std::ifstream fin(raw);
-  if (fin) {
-    nlohmann::json j;
-    fin >> j;
-    return j;
-  }
-  return nlohmann::json::parse(raw);
-}
-
 ProgramOptions ParseArgs(int argc, char** argv) {
   ProgramOptions opt;
   for (int i = 1; i < argc; ++i) {
@@ -59,11 +50,8 @@ ProgramOptions ParseArgs(int argc, char** argv) {
       PrintUsage(argv[0]);
       std::exit(0);
     }
-    else if (arg == "-j") {
-      if (i + 1 >= argc) {
-        throw std::runtime_error("-j requires a value");
-      }
-      opt.param_overrides = LoadJsonArg(argv[++i]);
+    else if (CliJsonUtils::ConsumeJsonOption(argc, argv, i, "-j", opt.param_overrides)) {
+      continue;
     }
     else if (arg == "--debug-limit") {
       if (i + 1 >= argc) {
@@ -90,18 +78,7 @@ ProgramOptions ParseArgs(int argc, char** argv) {
 EvolPrivRepGame::Parameters BuildParameters(const nlohmann::json& overrides) {
   EvolPrivRepGame::Parameters params;
   if (!overrides.is_null()) {
-    if (!overrides.is_object()) {
-      throw std::runtime_error("parameters JSON must be an object");
-    }
-
-    const std::vector<std::string> allowed = {
-      "N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "_seed"
-    };
-    for (auto it = overrides.begin(); it != overrides.end(); ++it) {
-      if (std::find(allowed.begin(), allowed.end(), it.key()) == allowed.end()) {
-        throw std::runtime_error("unknown parameter: " + it.key());
-      }
-    }
+    CliJsonUtils::ValidateObjectKeys(overrides, {"N", "t_init", "t_measure", "q", "mu_impl", "mu_percept", "mu_assess1", "mu_assess2", "_seed"});
 
     if (overrides.contains("N")) { params.N = overrides.at("N").get<size_t>(); }
     if (overrides.contains("t_init")) { params.t_init = overrides.at("t_init").get<size_t>(); }
