@@ -187,7 +187,7 @@ def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
 # Edit these parameters
 norms_to_plot = ["L6"]  # Add more norms as needed: ["L1", "L6", "L6-IS", etc.]
 build_dir = "cmake-build-release"
-params_json = '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":1.0,"mu_assess1":0.02,"mu_assess2":0.02,"mu_impl":0.02,"mu_percept":0.0,"seed":123456789}'
+params_json = '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":1.0,"mu_assess1":0.02,"mu_assess2":0.02,"mu_impl":0.02,"mu_percept":0.0,"_seed":123456789}'
 save_figure = True
 show_figure = True
 output_format = "pdf"  # png, pdf, or svg

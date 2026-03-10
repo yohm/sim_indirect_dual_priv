@@ -138,7 +138,7 @@ def build_prg_params(args) -> dict:
     """
     Parameters for inspect_PrivRepGame (-j)
     Keys must match inspect_PrivRepGame.cpp's default set:
-      t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, seed
+      t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, _seed
     """
     return {
         "t_init":    int(args.t_init),
@@ -148,7 +148,7 @@ def build_prg_params(args) -> dict:
         "mu_percept":float(args.mu_percept),
         "mu_assess1":float(args.mu_assess1),
         "mu_assess2":float(args.mu_assess2),
-        "seed":      int(args.seed),
+        "_seed":     int(args.seed),
     }
 
 def build_eprg_params(args) -> dict:
@@ -165,7 +165,7 @@ def build_eprg_params(args) -> dict:
         "mu_percept": float(args.mu_percept),
         "mu_assess1": float(args.mu_assess1),
         "mu_assess2": float(args.mu_assess2),
-        "seed":       int(args.seed),
+        "_seed":      int(args.seed),
         "benefit":    float(args.benefit),
         "beta":       float(args.beta),
     }

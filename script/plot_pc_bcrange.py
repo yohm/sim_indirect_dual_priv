@@ -211,7 +211,7 @@ PARAMS = {
     "mu_percept": 0.0,      # Perception error
     "mu_assess1": 0.02,     # Assessment error 1
     "mu_assess2": 0.02,      # Assessment error 2
-    "seed": 123456789,      # RNG seed
+    "_seed": 123456789,     # RNG seed
     "mutant_size": 1,       # Mutant size for invasion analysis
 }
 
