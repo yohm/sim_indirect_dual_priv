@@ -6,6 +6,22 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 
 #set(CMAKE_VERBOSE_MAKEFILE 1)
 
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  set(_libomp_prefixes
+      /opt/homebrew/opt/libomp
+      /usr/local/opt/libomp)
+  foreach(_libomp_prefix IN LISTS _libomp_prefixes)
+    if(EXISTS "${_libomp_prefix}/include/omp.h" AND EXISTS "${_libomp_prefix}/lib/libomp.dylib")
+      set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp -I${_libomp_prefix}/include" CACHE STRING "OpenMP C flags" FORCE)
+      set(OpenMP_C_LIB_NAMES "omp" CACHE STRING "OpenMP C libs" FORCE)
+      set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${_libomp_prefix}/include" CACHE STRING "OpenMP CXX flags" FORCE)
+      set(OpenMP_CXX_LIB_NAMES "omp" CACHE STRING "OpenMP CXX libs" FORCE)
+      set(OpenMP_omp_LIBRARY "${_libomp_prefix}/lib/libomp.dylib" CACHE FILEPATH "OpenMP libomp library" FORCE)
+      break()
+    endif()
+  endforeach()
+endif()
+
 find_package(OpenMP REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nlohmann_json REQUIRED)
