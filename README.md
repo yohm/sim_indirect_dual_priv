@@ -1,296 +1,193 @@
-# Prerequisites
+# sim_indirect_dual_priv
 
-- cmake
+Simulation code for indirect reciprocity under private and public assessment models.
+
+## Overview
+
+This repository provides:
+
+- core C++ implementations of norms and reputation-game dynamics
+- inspection binaries for checking norm properties and simulation outputs
+- unit tests with GoogleTest
+- Python scripts for plotting and post-processing results
+
+The main C++ sources live at the repository root. Plotting and analysis helpers are in `script/`.
+
+## Requirements
+
+### C++ build
+
+- CMake 3.7 or newer
+- C++17 compiler
 - OpenMP
 - Eigen3
-- nlohmann-json
+- nlohmann_json
+- MPI
 
-Install these prerequisites by homebrew if you are on macOS.
+GoogleTest is fetched automatically by CMake during configure.
+
+### macOS example
 
 ```bash
-brew install cmake
-brew install libomp
-brew install eigen
-brew install nlohmann-json
+brew install cmake libomp eigen nlohmann-json open-mpi
 ```
 
-# Build
+## Build
 
-Clone the repository with submodules.
+Clone with submodules, then configure and build into `cmake-build-release/`:
 
 ```bash
 git clone --recursive git@github.com:yohm/sim_indirect_dual_priv.git
 cd sim_indirect_dual_priv
-```
-
-Make a build directory and run cmake.
-
-```bash
-mkdir cmake-build-debug
-cd cmake-build-debug
-cmake ..
-cmake --build .
-```
-
-If you want to build in release mode, run cmake with `-DCMAKE_BUILD_TYPE=Release` option.
-
-```bash
-mkdir cmake-build-release
-cd cmake-build-release
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
-```
-
-## Executables
-
-### inspect_Norm
-
-Print details of a `Norm` instance.
-
-Accepted norm formats
-
-- `[NormName]` e.g., `AllC`, `L3`, `S12`, `GSCO-5.0`
-- `[ID]` or `[0xHEX_ID]` e.g., `857181`, `0xd145d`
-- `[Rd-Rr-P]` deterministic triplet, e.g., `128-132-2` (Rd=donor assessment ID, Rr=recipient assessment ID, P=action ID)
-- `20-number serialization` e.g., `c1 c2 c3 c4 g1..g8 r1..r8`
-
-Usage:
-
-```bash
-$ ./inspect_Norm AllC
-Norm: 0xffccf 1047759 [255-204-15] : AllC
-(G->G):cGG:GG	(G->B):cGG:BB	(B->G):cGG:GG	(B->B):cGG:BB
-(G->G): P:1.000 : R1 (c:1.000,d:1.000) : R2 (c:1.000,d:1.000)
-(G->B): P:1.000 : R1 (c:1.000,d:1.000) : R2 (c:0.000,d:0.000)
-(B->G): P:1.000 : R1 (c:1.000,d:1.000) : R2 (c:1.000,d:1.000)
-(B->B): P:1.000 : R1 (c:1.000,d:1.000) : R2 (c:0.000,d:0.000)
-Serialized: 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00
-```
-
-Triplet example:
-
-```bash
-$ ./inspect_Norm 128-132-2
-Norm: 0x0d145d 857181 [128-132-2] : ImageScoring
-...
-```
-
-Named norms are AllC, AllD, AllG, AllB, ImageScoring, L1–L8, L1-IS–L8-IS (L* with Rr = ImageScoring), and SecondarySixteen (S1–S16).
-
-You can also specify a norm by 20 floating-point numbers separated by spaces:
-
-```bash
-$ ./inspect_Norm '1 0 1 0  1.0 0.9 0.8 0.7 0.6 0.5 0.4 0.3  1 0 1 0 1 0 1 0'
-(G->G): P:1.000 : R1 (c:1.000,d:0.900) : R2 (c:1.000,d:0.000)
-(G->B): P:0.000 : R1 (c:0.800,d:0.700) : R2 (c:1.000,d:0.000)
-(B->G): P:1.000 : R1 (c:0.600,d:0.500) : R2 (c:1.000,d:0.000)
-(B->B): P:0.000 : R1 (c:0.400,d:0.300) : R2 (c:1.000,d:0.000)
-Serialized: 1.00 0.00 1.00 0.00 1.00 0.90 0.80 0.70 0.60 0.50 0.40 0.30 1.00 0.00 1.00 0.00 1.00 0.00 1.00 0.00
-```
-
-### inspect_PublicRepGame
-
-Print the details of the Norm under public assessment model.
-
-Accepted norm formats are the same as `inspect_Norm` (name, decimal/hex ID, Rd-Rr-P triplet, or 20-number serialization).
-
-```bash
-$ ./cmake-build-release/inspect_PublicRepGame L3
-(G->G): P:0.999 : R1 (c:0.999,d:0.001) : R2 (c:0.999,d:0.999)
-(G->B): P:0.000 : R1 (c:0.999,d:0.999) : R2 (c:0.001,d:0.001)
-(B->G): P:0.999 : R1 (c:0.999,d:0.001) : R2 (c:0.999,d:0.999)
-(B->B): P:0.000 : R1 (c:0.999,d:0.999) : R2 (c:0.001,d:0.001)
-Serialized: 1.00 0.00 1.00 0.00 1.00 0.00 1.00 1.00 1.00 0.00 1.00 1.00 1.00 1.00 0.00 0.00 1.00 1.00 0.00 0.00
-h*: 0.997011, pc_res_res: 0.996014
-stable benefit range against ALLD: 1.00501, 1.79769e+308
-stable benefit range against ALLC: 1.00501, 1.79769e+308
-ESS b_range: 1.00501, 1.79769e+308
-```
-
-### inspect_PrivRepGame
-
-Prints private-assessment dynamics. Logs (parameters, warm-up series, elapsed) go to stderr; structured results are printed as JSON to stdout.
-
-Usage:
-
-```bash
-./cmake-build-release/inspect_PrivRepGame [-j <param.json|json-string>] [-g] <Norm1> <n1> [<Norm2> <n2> ...]
-
-Norm arguments accept the same formats as `inspect_Norm` (name, ID, 0xHEX_ID, Rd-Rr-P, or 20 numbers).
-```
-
-```bash
-$ ./cmake-build-release/inspect_PrivRepGame L3 50
-# stderr
-Parameters:
-{
-  "mu_assess1": 0.05,
-  "mu_assess2": 0.0,
-  "mu_impl": 0.0,
-  "mu_percept": 0.0,
-  "q": 1.0,
-  "seed": 123456789,
-  "t_init": 1000,
-  "t_measure": 1000
-}
-20 0.907
-40 0.897
-...
-1000 0.90032
-Elapsed time: 0.059 s
-
-# stdout
-{
-  "SystemWideCooperationLevel": 0.90158
-}
-```
-
-We can simulate the population with mixed strategies. For instance, the population of 30 L1 and 30 L2 players can be simulated as follows:
-The first column of the time series is the system-wide cooperation level, and the remaining columns are the cooperation probabilities between the players of each Norm.
-
-```bash
-./cmake-build-release/inspect_PrivRepGame L1 30 L2 30
-# stderr (truncated)
-Parameters:
-{
-  "mu_assess1": 0.05,
-  "mu_assess2": 0.0,
-  "mu_impl": 0.0,
-  "mu_percept": 0.0,
-  "q": 1.0,
-  "seed": 123456789,
-  "t_init": 1000,
-  "t_measure": 1000
-}
-20 0.818333 0.919463 0.827815 0.768212 0.758389
-40 0.798333 0.907666 0.797125 0.769968 0.721254
-...
-1000 0.79085 0.89104 0.791409 0.766109 0.715423
-Elapsed time: 0.094 s
-
-# stdout
-{
-  "SystemWideCooperationLevel": 0.78405,
-  "NormCooperationLevels": [
-    [0.887342, 0.786161],
-    [0.757679, 0.705684]
-  ]
-}
-```
-
-In this example, L1 cooperates with L1 with 0.887342, L1 cooperates with L2 with 0.786161, L2 cooperates with L1 with 0.757679, and L2 cooperates with L2 with 0.705684.
-
-You can change the simulation parameters by specifying a JSON file with the `-j` option.
-
-```bash
-./cmake-build-release/inspect_PrivRepGame -j '{"mu_assess1":0.05,"t_init":10000,"t_measure":10000}' L1 30 L2 30
-```
-
-### inspect_EvolPrivRepGame
-
-Computes evolutionary outcomes under private assessment.
-
-Usage:
-
-```bash
-./cmake-build-release/inspect_EvolPrivRepGame [-j <param.json|json-string>] <Norm>
-./cmake-build-release/inspect_EvolPrivRepGame [-j <param.json|json-string>] <Norm1> <Norm2>
-
-Norm arguments accept the same formats as `inspect_Norm` (name, ID, 0xHEX_ID, Rd-Rr-P, or 20 numbers).
-```
-
-Notes:
-
-- Logs (threads, parameters, elapsed) go to stderr. Results are printed as JSON to stdout.
-- With one norm, returns selection–mutation equilibrium against AllC/AllD: `self_cooperation_level`, `rhos`, `eq`, and `eq_cooperation_level`.
-- With two norms, returns transition probabilities, low-mutation equilibrium population, and monomorphic cooperation levels. Also writes `payoffs.dat` (columns: `l pi_norm1[l] pi_norm2[l]`).
-
-Two-norm example:
-
-```bash
-$ ./cmake-build-release/inspect_EvolPrivRepGame L1 L2
-# stderr
-Running with 32 threads
-Parameters:{
-  "N": 30,
-  "mu_assess1": 0.05,
-  "mu_assess2": 0.0,
-  "mu_impl": 0.0,
-  "mu_percept": 0.0,
-  "q": 1.0,
-  "seed": 123456789,
-  "t_init": 1000,
-  "t_measure": 1000,
-  "benefit": 5,
-  "beta": 1
-}
-Elapsed time: 0.12 s
-
-# stdout
-{
-  "transition_prob:n1->n2": 8.67603e-05,
-  "transition_prob:n1<-n2": 0.157517,
-  "equilibrium_population": [0.99945, 0.000550495],
-  "monomorphic_coop_levels": [0.899233, 0.7011]
-}
-```
-
-Single-norm example:
-
-```bash
-$ ./cmake-build-release/inspect_EvolPrivRepGame L3
-# stdout
-{
-  "self_cooperation_level": 0.90,
-  "rhos": [ ... ],
-  "eq": [ ... ],
-  "eq_cooperation_level": 0.90
-}
-```
-
-## Python Scripts and Environment (uv)
-
-This repository includes Python helper scripts under `script/` for analysis and plotting. They depend only on NumPy and Matplotlib and interact with the built C++ executables.
-
-### Environment setup with uv
-
-- Install uv (package manager by Astral) if you don't have it:
-  - macOS/Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-  - Windows (PowerShell): `irm https://astral.sh/uv/install.ps1 | iex`
-
-From the repository root:
-
-```bash
-uv venv .venv
-source .venv/bin/activate              # Windows: .venv\\Scripts\\Activate.ps1
-uv pip install -r script/requirements.txt
-```
-
-Build the C++ executables (Release) if you plan to use the inspection/triadic scripts:
-
-```bash
 cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
 cmake --build cmake-build-release -j
 ```
 
-### How to run the scripts
+## Test
 
-- Image matrix simulation/plot (no C++ dependency):
-  - `python script/plot_image_matrix.py --norm L3 --N 50 --ep 0.05 --q 0.9 --nIt 20000 --seed 0`
-  - `python script/plot_image_matrix.py --norm all`
-
-- Norm comparisons (requires built executables):
-  - `python script/compare_Norm.py`
-
-- Triadic competition plot (requires built executables):
-  - `python script/plot_triadic_competition.py --norms L1`
-  - or pass a full parameter string: `python script/plot_triadic_competition.py "1.00 0.00 ..."`
-
-## Tests
-
-Unit tests are prepared. The executables that starts with `test_` are the unit tests. Run these tests using `ctest` command.
+Run all unit tests with:
 
 ```bash
-cd cmake-build-debug
-ctest
+ctest --test-dir cmake-build-release --output-on-failure
 ```
+
+You can also run a single test binary directly, for example:
+
+```bash
+./cmake-build-release/test_Norm
+```
+
+## Repository layout
+
+```text
+.
+├── CMakeLists.txt
+├── *.hpp / inspect_*.cpp / main_*.cpp / test_*.cpp
+├── icecream-cpp/
+└── script/
+```
+
+## Norm input format
+
+The inspection and simulation binaries accept the same norm string formats:
+
+- norm name, for example `AllC`, `L3`, `S12`, `ImageScoring`
+- decimal ID or hex ID, for example `857181`, `0xd145d`
+- deterministic triplet `Rd-Rr-P`, for example `128-132-2`
+- serialized values, for example `c1 c2 c3 c4 g1 ... g8 r1 ... r8`
+
+`inspect_Norm` and `inspect_PublicRepGame` also support `-s` to swap good and bad labels.
+
+## Main executables
+
+### `inspect_Norm`
+
+Prints a human-readable description of a norm. If multiple norms are given, it prints comparisons.
+
+```bash
+./cmake-build-release/inspect_Norm L3
+./cmake-build-release/inspect_Norm L3 L6
+./cmake-build-release/inspect_Norm -s 128-132-2
+```
+
+### `inspect_PublicRepGame`
+
+Evaluates a norm under the public assessment model and prints stability-related quantities.
+
+```bash
+./cmake-build-release/inspect_PublicRepGame L3
+```
+
+### `inspect_PrivRepGame`
+
+Runs the private assessment simulation for one or more resident populations. Progress and parameters are written to `stderr`; structured results are written as JSON to `stdout`.
+
+```bash
+./cmake-build-release/inspect_PrivRepGame L3 50
+./cmake-build-release/inspect_PrivRepGame L1 30 L2 30
+./cmake-build-release/inspect_PrivRepGame -j '{"t_init":10000,"t_measure":10000}' L1 30 L2 30
+```
+
+Options:
+
+- `-j <json|path>`: override simulation parameters
+- `-g`: also compute average reputations and write `image.txt`
+
+Default parameters:
+
+```json
+{
+  "t_init": 1000,
+  "t_measure": 1000,
+  "q": 1.0,
+  "mu_impl": 0.0,
+  "mu_percept": 0.0,
+  "mu_assess1": 0.05,
+  "mu_assess2": 0.0,
+  "seed": 123456789
+}
+```
+
+### `inspect_EvolPrivRepGame`
+
+Computes evolutionary outcomes under private assessment.
+
+```bash
+./cmake-build-release/inspect_EvolPrivRepGame L3
+./cmake-build-release/inspect_EvolPrivRepGame L1 L2
+./cmake-build-release/inspect_EvolPrivRepGame -j '{"N":50,"benefit":5.0,"beta":1.0}' L3
+```
+
+- one norm: returns selection-mutation equilibrium against `AllC` and `AllD`
+- two norms: returns transition probabilities, equilibrium population, and monomorphic cooperation levels
+
+When two norms are given, the program also writes `payoffs.dat`.
+
+### `main_RecoveryAnalysis`
+
+Estimates recovery time from a single bad entry in the image matrix.
+
+```bash
+./cmake-build-release/main_RecoveryAnalysis L3
+./cmake-build-release/main_RecoveryAnalysis -j '{"N":50,"max_t":10000,"num_samples":1000,"_seed":123456789}' L3
+```
+
+### `main_SweepR2`
+
+Sweeps the recipient assessment rule `R2` for a base norm and writes a TSV table.
+
+```bash
+./cmake-build-release/main_SweepR2 --params '{"base_norm":"L3","N":50,"t_init":1000,"t_measure":1000}' --out R2_sweep_L3.tsv
+```
+
+### `main_ExhaustiveSearch`
+
+Searches deterministic third-order norms up to bad/good symmetry. MPI is required.
+
+```bash
+mpirun -n 4 ./cmake-build-release/main_ExhaustiveSearch
+mpirun -n 4 ./cmake-build-release/main_ExhaustiveSearch -j '{"N":50,"t_init":1000,"t_measure":1000}'
+```
+
+## Python scripts
+
+Python utilities for plotting and figure assembly are in [`script/README.md`](/Users/murase/work/sim_indirect_dual_priv/script/README.md).
+
+Install dependencies with:
+
+```bash
+python -m pip install -r script/requirements.txt
+```
+
+Representative scripts:
+
+- `script/plot_rr_sweep.py`
+- `script/plot_rr_sweep_bcs.py`
+- `script/plot_image_matrix_mono.py`
+- `script/plot_triadic_competition.py`
+- `script/combine_rr_sweep_figures.py`
+
+## Notes
+
+- Build artifacts should stay in a separate build directory such as `cmake-build-release/`.
+- Large generated outputs should not be committed unless they are intended repository artifacts.

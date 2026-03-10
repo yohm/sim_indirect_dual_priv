@@ -1,210 +1,193 @@
-# Figure Generation Pipeline
+# Script Guide
 
-This document describes the workflow for generating individual figures and combining them into multi-panel figures for publication.
+This directory contains plotting, post-processing, and sweep helpers for the C++ simulations.
 
-## Prerequisites
+## Scope
 
-- Python 3.x with required packages: `matplotlib`, `pdf2image`, `numpy`
-- C++ executable: `inspect_PrivRepGame` (built in `cmake-build-release/`)
-- Input data files in `output/` directory: `R2_sweep_*.tsv`
+The scripts fall into two groups:
 
-## Step-by-Step Workflow
+- scripts that read precomputed TSV or PDF files from `script/output/` and `script/figures/`
+- scripts that call compiled executables such as `inspect_PrivRepGame`, `inspect_EvolPrivRepGame`, or `main_RecoveryAnalysis`
 
-### 0. Generate Input Data (if not already available)
+Many of the older plotting scripts use relative paths such as `output/...` and `figures/...`. In practice, run those scripts from the `script/` directory unless noted otherwise.
 
-Before generating figures, you need to run simulations to generate the TSV data files.
+## Python requirements
+
+Install dependencies from the repository root:
 
 ```bash
-# Generate R2_sweep data for all norms
+python -m pip install -r script/requirements.txt
+```
+
+Some figure-composition scripts also require `pdf2image`, which in turn requires Poppler.
+
+macOS:
+
+```bash
+brew install poppler
+```
+
+## Build requirements
+
+Several scripts expect compiled binaries in `cmake-build-release/`. Build them from the repository root:
+
+```bash
+cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build cmake-build-release -j
+```
+
+The main executable dependencies are:
+
+- `cmake-build-release/main_SweepR2`
+- `cmake-build-release/inspect_PrivRepGame`
+- `cmake-build-release/inspect_EvolPrivRepGame`
+- `cmake-build-release/main_RecoveryAnalysis`
+
+## Typical workflow
+
+If you want the publication-style sweep figures, the usual order is:
+
+1. generate `R2_sweep_*.tsv`
+2. create individual plots from those TSV files
+3. combine the generated PDFs into multi-panel figures
+
+The commands below assume you start from the repository root.
+
+## 1. Generate sweep tables
+
+`run_sweepR2.sh` calls `main_SweepR2` for a predefined set of norms and writes TSV files to `script/output/`.
+
+```bash
+cd script
 bash run_sweepR2.sh
 ```
 
-**Output:** `output/R2_sweep_{norm}.tsv` for each norm (L1, L1v, L2, L2v, L3, L4, L5, L6, L7, L8)
+Expected outputs include:
 
-**Note:** This script runs `main_SweepR2` executable for each norm with predefined parameters (N=50, mutation rates=0.02, etc.). This may take some time depending on your system.
+- `script/output/R2_sweep_L1.tsv`
+- `script/output/R2_sweep_L1v.tsv`
+- `script/output/R2_sweep_L2.tsv`
+- `script/output/R2_sweep_L2v.tsv`
+- `script/output/R2_sweep_L3.tsv` through `script/output/R2_sweep_L8.tsv`
 
----
+## 2. Create individual figures
 
-### 1. Generate Individual Figures
-
-#### 1.1 RR Sweep Figures (Equilibrium Fraction)
-Generate scatter plots showing self-cooperation level vs equilibrium fraction for each norm.
+The following scripts are primarily notebook-style scripts with `#%%` cells. They are easiest to run from `script/` in VS Code interactive mode, or as plain Python scripts after editing the parameter cell near the bottom.
 
 ```bash
-# Edit the norm parameter in plot_rr_sweep.py, then run:
+cd script
 python plot_rr_sweep.py
-```
-
-**Output:** `figures/rr_sweep_{norm}.pdf` for each norm (L1, L1v, L2, L2v, L3, L4, L5, L6, L7, L8)
-
-**Note:** Run the script once, which will generate all norms automatically. Modify `norm = "L6"` in the parameters cell if you want to regenerate a specific norm.
-
----
-
-#### 1.2 RR Sweep B/C Range Figures
-Generate scatter plots showing self-cooperation level vs minimum b/c ratio.
-
-```bash
 python plot_rr_sweep_bcs.py
-```
-
-**Output:** `figures/rr_sweep_bcs_{norm}.pdf` for each norm
-
----
-
-#### 1.3 Image Matrix Figures
-Generate monomorphic image matrices showing cooperation patterns.
-
-```bash
 python plot_image_matrix_mono.py
-```
-
-**Output:** `figures/image_matrix_mono_{norm}_mono.pdf` for each norm and variant (e.g., L6, L6-IS)
-
----
-
-#### 1.4 PC and B/C Range Comparison Figures
-Generate bar charts and range plots comparing base norms with their IS variants.
-
-```bash
 python plot_pc_bcrange.py
-```
-
-**Output:** 
-- `figures/pc_{norm}_vs_{norm}-IS.pdf` (self-cooperation level comparison)
-- `figures/bc_range_{norm}_vs_{norm}-IS.pdf` (stable b/c range comparison)
-
----
-
-#### 1.5 Triad Figures
-Generate triadic competition analysis figures.
-
-```bash
 python plot_triadic_competition.py
 ```
 
-**Output:** `figures/triad_{norm}.pdf` for each norm
+Representative outputs:
 
----
+- `script/figures/rr_sweep_<norm>.pdf`
+- `script/figures/rr_sweep_bcs_<norm>.pdf`
+- `script/figures/image_matrix_mono_<norm>_mono.pdf`
+- `script/figures/pc_<norm>_vs_<norm>-IS.pdf`
+- `script/figures/bc_range_<norm>_vs_<norm>-IS.pdf`
+- `script/figures/triad_<norm>.pdf`
 
-### 2. Combine Figures into Multi-Panel Layouts
+### Notes by script
 
-#### 2.1 Combined RR Sweep Figures
+- `plot_rr_sweep.py`
+  - reads `script/output/R2_sweep_<norm>.tsv`
+  - plots self-cooperation level vs equilibrium fraction
+- `plot_rr_sweep_bcs.py`
+  - reads `script/output/R2_sweep_<norm>.tsv`
+  - plots self-cooperation level vs lower `b/c` threshold
+- `plot_image_matrix_mono.py`
+  - calls `inspect_PrivRepGame -g`
+  - writes `image_matrix_mono_*.pdf`
+- `plot_pc_bcrange.py`
+  - calls `inspect_PrivRepGame`
+  - compares a base norm and its `-IS` variant
+- `plot_triadic_competition.py`
+  - calls `inspect_EvolPrivRepGame`
+  - writes triadic competition diagrams
 
-```bash
-python combine_rr_sweep_figures.py
-```
+## 3. Combine figures
 
-**Output:**
-- `figures/combined_rr_sweep.pdf` - Main figure with L6, L8, L5, L3 (1 row × 4 columns)
-- `figures/combined_rr_sweep_others.pdf` - Other norms: L1v, L2v, L4, L7, L1, L2 (2 rows × 4 columns with legend)
-
-**Features:**
-- Left columns are cropped to remove redundant y-axis labels
-- Legend displayed in the empty panel (bottom row, 3rd column)
-
----
-
-#### 2.2 Combined RR Sweep B/C Range Figures
-
-```bash
-python combine_rr_sweep_bcs_figures.py
-```
-
-**Output:**
-- `figures/combined_rr_sweep_bcs.pdf` - Main figure with L6, L8, L5, L3
-- `figures/combined_rr_sweep_bcs_others.pdf` - Other norms with legend
-
-**Features:** Same layout as combined_rr_sweep figures
-
----
-
-#### 2.3 Combined Image Matrix + PC + B/C Range Figures
+These scripts assemble previously generated PDFs into publication-style panels.
 
 ```bash
-python combine_image_pc_bcrange.py
+python script/combine_rr_sweep_figures.py
+python script/combine_rr_sweep_bcs_figures.py
+python script/combine_image_pc_bcrange.py
+python script/combine_triad_figures.py
 ```
 
-**Output:**
-- `figures/combined_image_pc_bcrange.pdf` - 4 rows × 4 columns layout
+Outputs are written under `script/figures/`:
 
-**Layout:**
-Each row represents a norm (L6, L8, L5, L3) with:
-- Column 1: Image matrix (base norm)
-- Column 2: Image matrix (IS variant)
-- Column 3: Self-cooperation level comparison
-- Column 4: Stable b/c range comparison
+- `combined_rr_sweep.pdf`
+- `combined_rr_sweep_others.pdf`
+- `combined_rr_sweep_bcs.pdf`
+- `combined_rr_sweep_bcs_others.pdf`
+- `combined_image_pc_bcrange.pdf`
+- `combined_triads.pdf`
+- `combined_triads_others.pdf`
 
-**Features:**
-- Row labels on the left indicating norm name and type (e.g., "L6\n(Type III)")
-- Column labels at the top:
-  - "image matrix" spanning columns 1-2, with "-base" and "-IS" sub-labels
-  - "self-cooperation\nlevel" for column 3
-  - "stable b/c\nrange" for column 4
-- Custom column widths (left 2 columns narrower: 0.75, right 2 columns: 1.0)
-- Custom spacing (hspace=0.15, wspace=0.05)
-- Right 2 columns are cropped to reduce gap between them
+## Other utilities
 
----
+### `compare_Norm.py`
 
-#### 2.4 Combined Triad Figures
+CLI tool for comparing norms with configurable simulation parameters. It calls both `inspect_PrivRepGame` and `inspect_EvolPrivRepGame`.
+
+Run `python script/compare_Norm.py --help` for options.
+
+### `plot_recovery_time_vs_N.py`
+
+Sweeps population size and calls `main_RecoveryAnalysis`. This script is useful for recovery-time experiments rather than the main figure pipeline.
+
+### `plot_resident_mutant_payoff.py`
+
+CLI tool that plots resident and mutant payoffs as the mutant fraction changes.
+
+Example:
 
 ```bash
-python combine_triad_figures.py
+python script/plot_resident_mutant_payoff.py \
+  --resident L6-IS \
+  --mutant AllD \
+  --benefit 5 \
+  --cost 1 \
+  --N 50 \
+  --points 51 \
+  --build-dir cmake-build-release \
+  --params '{"t_init":1000,"t_measure":1000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.0,"mu_percept":0.0,"seed":123456789}' \
+  --save \
+  --format pdf \
+  --no-show
 ```
 
-**Output:**
-- `figures/combined_triads.pdf` - Main norms: L6, L6-IS, L8, L8-IS, L5, L5-IS, L3, L3-IS (2 rows × 4 columns)
-- `figures/combined_triads_others.pdf` - Other norms (3 rows × 4 columns)
+## Directory conventions
 
----
+Typical inputs and outputs in this directory:
 
-## Output Directory Structure
-
-```
+```text
 script/
+├── output/
+│   └── R2_sweep_*.tsv
 ├── figures/
-│   ├── rr_sweep_*.pdf                    # Individual RR sweep figures
-│   ├── rr_sweep_bcs_*.pdf                # Individual B/C range figures
-│   ├── image_matrix_mono_*.pdf           # Individual image matrices
-│   ├── pc_*_vs_*.pdf                     # PC comparison figures
-│   ├── bc_range_*_vs_*.pdf               # B/C range comparison figures
-│   ├── triad_*.pdf                       # Individual triad figures
-│   ├── combined_rr_sweep.pdf             # Combined RR sweep (main)
-│   ├── combined_rr_sweep_others.pdf      # Combined RR sweep (others)
-│   ├── combined_rr_sweep_bcs.pdf         # Combined B/C range (main)
-│   ├── combined_rr_sweep_bcs_others.pdf  # Combined B/C range (others)
-│   ├── combined_image_pc_bcrange.pdf     # Combined image+pc+bc
-│   ├── combined_triads.pdf               # Combined triads (main)
-│   └── combined_triads_others.pdf        # Combined triads (others)
+│   ├── rr_sweep_*.pdf
+│   ├── rr_sweep_bcs_*.pdf
+│   ├── image_matrix_mono_*.pdf
+│   ├── pc_*_vs_*.pdf
+│   ├── bc_range_*_vs_*.pdf
+│   ├── triad_*.pdf
+│   └── combined_*.pdf
+└── image.txt
 ```
 
-## Notes
+`image.txt` is a transient output produced by `inspect_PrivRepGame -g` and may be overwritten.
 
-- All scripts use VSCode interactive mode (cells starting with `#%%`)
-- Figures are saved with DPI=150 for reasonable file sizes
-- PDF metadata is stripped for cleaner output
-- The `pdf2image` library requires `poppler` to be installed:
-  - macOS: `brew install poppler`
-  - Ubuntu: `apt-get install poppler-utils`
+## Caveats
 
-## Customization
-
-### Adjusting Layout Parameters
-
-In combine scripts, you can adjust:
-- `figsize`: Overall figure dimensions
-- `dpi`: Resolution (higher = larger file size)
-- `width_ratios`: Relative column widths in GridSpec
-- `hspace`, `wspace`: Vertical and horizontal spacing between subplots
-- Cropping percentages for trimming images
-
-### Font Sizes
-
-Default font sizes used:
-- Main column/row labels: 32pt
-- Sub-labels: 28pt
-- Panel labels (a, b, c...): 20pt
-- Axis labels in individual plots: 30pt
-- Tick labels: 20pt
-- Legend text: 24pt
+- Several scripts are parameterized by variables in the source rather than command-line flags.
+- Some scripts assume the current working directory is `script/`.
+- Most plotting scripts do not validate missing intermediate files beyond simple existence checks.
+- Generated PDFs and TSVs are outputs, not authoritative inputs.
