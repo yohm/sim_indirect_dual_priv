@@ -1,5 +1,6 @@
 oacis_*
 cmake-build-*
+build
 .venv
 *.dat
 results_tables
