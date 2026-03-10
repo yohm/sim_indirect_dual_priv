@@ -14,40 +14,26 @@ Usage:
 """
 
 #%% Imports and setup
-import json
-import os
 import sys
 from pathlib import Path
-import subprocess
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, FancyArrowPatch
+from utils import dumps_json_arg, figure_path, resolve_build_exe, run_json_command
 
 #%% Utils
 
-ROOT = Path(__file__).resolve().parents[1]
-EPRG_DEFAULT = ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame"
-
-def parse_json_stdout(text: str) -> dict:
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as e:
-        sys.exit(f"[ERROR] invalid JSON from executable: {e}\n---BEGIN STDOUT---\n{text}\n---END STDOUT---")
+EPRG_DEFAULT = resolve_build_exe("inspect_EvolPrivRepGame")
 
 def run_and_parse(exe: Path, norm: str, j_arg: str | None):
-    cmd = [str(exe)]
+    args: list[str] = []
     if j_arg:
-        cmd += ["-j", j_arg]
-    cmd += [norm]
-
+        args += ["-j", j_arg]
+    args += [norm]
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    except FileNotFoundError:
-        sys.exit(f"[ERROR] Executable not found: {exe}")
-    except subprocess.CalledProcessError as e:
-        sys.exit(f"[ERROR] Execution failed:\n$ {' '.join(cmd)}\n---STDOUT---\n{e.stdout}\n---STDERR---\n{e.stderr}")
-
-    obj = parse_json_stdout(res.stdout)
+        obj = run_json_command(exe, args)
+    except RuntimeError as e:
+        sys.exit(f"[ERROR] {e}")
     eq = obj.get("eq")
     rhos = obj.get("rhos")
     if eq is None or rhos is None:
@@ -187,13 +173,13 @@ def draw_triad(norm_label: str, eq, rhos, outpath: Path | None, show: bool):
 # Edit these parameters
 norms_to_plot = ["L6"]  # Add more norms as needed: ["L1", "L6", "L6-IS", etc.]
 build_dir = "cmake-build-release"
-params_json = '{"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":1.0,"mu_assess1":0.02,"mu_assess2":0.02,"mu_impl":0.02,"mu_percept":0.0,"_seed":123456789}'
+params_json = dumps_json_arg({"N":50,"benefit":5,"beta":1,"t_init":2000,"t_measure":2000,"q":1.0,"mu_assess1":0.02,"mu_assess2":0.02,"mu_impl":0.02,"mu_percept":0.0,"_seed":123456789})
 save_figure = True
 show_figure = True
 output_format = "pdf"  # png, pdf, or svg
 
 #%% Check executable
-exe = ROOT / build_dir / "inspect_EvolPrivRepGame"
+exe = resolve_build_exe("inspect_EvolPrivRepGame", build_dir)
 if not exe.exists():
     print(f"[ERROR] executable not found: {exe}")
 
@@ -210,7 +196,7 @@ if exe.exists():
 for norm, (eq, rhos) in results.items():
     # Add "-base" suffix if norm doesn't contain "-"
     display_name = norm if "-" in norm else f"{norm}-base"
-    outpath = (ROOT / "script" / "figures" / f"triad_{norm}.{output_format}") if save_figure else None
+    outpath = figure_path(f"triad_{norm}.{output_format}") if save_figure else None
     draw_triad(display_name, eq, rhos, outpath=outpath, show=show_figure)
 
 #%% Plot all norms
@@ -224,7 +210,7 @@ for norm in all_norms:
         eq, rhos = run_and_parse(exe, norm, params_json)
         # Add "-base" suffix if norm doesn't contain "-"
         display_name = norm if "-" in norm else f"{norm}-base"
-        outpath = (ROOT / "script" / "figures" / f"triad_{norm}.{output_format}") if save_figure else None
+        outpath = figure_path(f"triad_{norm}.{output_format}") if save_figure else None
         draw_triad(display_name, eq, rhos, outpath=outpath, show=False)
     except Exception as e:
         print(f"[WARNING] Failed to process {norm}: {e}")

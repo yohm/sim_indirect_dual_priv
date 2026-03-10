@@ -15,15 +15,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from pathlib import Path
+from utils import figure_path, resolve_build_exe
 
-# Resolve repo root and executables
-ROOT = Path(__file__).resolve().parents[1]
-PRG_EXE = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
+PRG_EXE = resolve_build_exe("inspect_PrivRepGame")
 
 
 #%% Helper functions for running C++ simulation
 def run_cpp_simulation(
-    exe: str,
+    exe: Path,
     focal: str,
     N: int,
     params: dict,
@@ -78,12 +77,7 @@ def run_cpp_simulation(
 
 
 #%% Plotting functions
-def show_binary_matrix(
-    MEnd: np.ndarray,
-    good_color: str,
-    outpath: Path | None = None,
-    show: bool = True,
-):
+def show_binary_matrix(MEnd: np.ndarray, good_color: str, outpath: Path | None = None, show: bool = True):
     cmap = ListedColormap(["white", good_color])
     norm = BoundaryNorm([-0.5, 0.5, 1.5], 2)
 
@@ -144,51 +138,29 @@ show_figure = True
 output_format = "pdf"  # "png", "pdf", or "svg"
 
 
+def run_one(focal_norm: str) -> None:
+    mend = run_cpp_simulation(PRG_EXE, focal_norm, N, CPP_PARAMS)
+    if mend is None:
+        print(f"[ERROR] Simulation failed for {focal_norm}.")
+        return
+
+    outpath = figure_path(f"image_matrix_mono_{focal_norm}_mono.{output_format}") if save_figure else None
+    show_binary_matrix(mend, good_color=default_colors[focal_norm], outpath=outpath, show=show_figure)
+
+
+def run_all() -> None:
+    for focal_norm in ["L1", "L1-IS", "L2", "L2-IS",
+                       "L3", "L3-IS", "L4", "L4-IS",
+                       "L5", "L5-IS", "L6", "L6-IS",
+                       "L7", "L7-IS", "L8", "L8-IS"]:
+        run_one(focal_norm)
+
+
 #%% Run simulation and plot (using C++ implementation)
-MEnd = run_cpp_simulation(PRG_EXE, focal_nm, N, CPP_PARAMS)
-
-if MEnd is None:
-    print("[ERROR] Simulation failed. Exiting.")
-else:
-    color = default_colors[focal_nm]
-    tag = f"{focal_nm}_mono"
-
-    outpath = None
-    if save_figure:
-        Path("figures").mkdir(exist_ok=True)
-        outpath = Path(f"figures/image_matrix_mono_{tag}.{output_format}")
-    show_binary_matrix(
-        MEnd,
-        good_color=color,
-        outpath=outpath,
-        show=show_figure,
-    )
-
+run_one(focal_nm)
 
 # %%
 # Run for multiple norms (using C++ implementation)
-for focal_nm in ["L1", "L1-IS", "L2", "L2-IS",
-                 "L3", "L3-IS", "L4", "L4-IS",
-                 "L5", "L5-IS", "L6", "L6-IS",
-                 "L7", "L7-IS", "L8", "L8-IS"]:
-    MEnd = run_cpp_simulation(PRG_EXE, focal_nm, N, CPP_PARAMS)
-    
-    if MEnd is None:
-        print(f"[ERROR] Simulation failed for {focal_nm}. Skipping.")
-        continue
-    
-    color = default_colors[focal_nm]
-    tag = f"{focal_nm}_mono"
-    
-    outpath = None
-    if save_figure:
-        Path("figures").mkdir(exist_ok=True)
-        outpath = Path(f"figures/image_matrix_mono_{tag}.{output_format}")
-    show_binary_matrix(
-        MEnd,
-        good_color=color,
-        outpath=outpath,
-        show=show_figure,
-    )
+run_all()
 
 # %%

@@ -11,16 +11,11 @@ Examples:
 """
 
 import argparse
-import subprocess
-import json
-import sys
-import shutil
 from pathlib import Path
+from utils import dumps_json_arg, resolve_build_exe, run_json_command
 
-# Resolve repo root and executables regardless of CWD
-ROOT = Path(__file__).resolve().parents[1]
-PRG_EXE  = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
-EPRG_EXE = str(ROOT / "cmake-build-release" / "inspect_EvolPrivRepGame")
+PRG_EXE = resolve_build_exe("inspect_PrivRepGame")
+EPRG_EXE = resolve_build_exe("inspect_EvolPrivRepGame")
 
 # Named norms to evaluate. Recognized by the C++ parser (Norm::ConstructFromName).
 LABELS = [
@@ -36,19 +31,11 @@ LABELS = [
     "L8", "L8-IS",
 ]
 
-def run(exe: str, args: list[str]) -> str | None:
+def run(exe: Path, args: list[str]) -> dict | None:
     try:
-        res = subprocess.run([exe] + args, capture_output=True, text=True, check=True)
-        return res.stdout
-    except FileNotFoundError:
-        print(f"[ERROR] Executable not found: {exe}", file=sys.stderr)
-        sys.exit(1)
-    except subprocess.CalledProcessError as e:
-        print(f"[ERROR] Execution failed: {exe} {args}\n{e.stdout}\n{e.stderr}", file=sys.stderr)
+        return run_json_command(exe, args)
+    except RuntimeError:
         return None
-
-def parse_obj(text: str) -> dict:
-    return json.loads(text)
 
 def pick_swcl_obj(obj: dict):
     v = obj.get("SystemWideCooperationLevel")
@@ -196,13 +183,9 @@ def main():
     args = parser.parse_args()
 
     # Check executables
-    for exe in (PRG_EXE, EPRG_EXE):
-        if not (Path(exe).exists() or shutil.which(exe)):
-            print(f"[ERROR] Executable not found: {exe}", file=sys.stderr); sys.exit(1)
-
     # Build JSON payloads (passed inline to -j)
-    prg_j  = json.dumps(build_prg_params(args))
-    eprg_j = json.dumps(build_eprg_params(args))
+    prg_j = dumps_json_arg(build_prg_params(args))
+    eprg_j = dumps_json_arg(build_eprg_params(args))
 
     labels = list(LABELS)
     rows = []
@@ -212,27 +195,27 @@ def main():
 
         # Monomorphic SWCL with PRG (size = Nprg)
         out1 = run(PRG_EXE,  ["-j", prg_j, norm_str, str(args.Nprg)])
-        swcl = pick_swcl_obj(parse_obj(out1)) if out1 else None
+        swcl = pick_swcl_obj(out1) if out1 else None
 
         # Invasion analysis vs AllC (resident size = Nprg-1, mutant = mutant)
         out2 = run(PRG_EXE,  ["-j", prg_j, norm_str, str(args.Nprg-args.mutant), "AllC", str(args.mutant)])
-        bcmax_c, bcmin_c = pick_invasion_bcs_obj(parse_obj(out2)) if out2 else (None, None)
+        bcmax_c, bcmin_c = pick_invasion_bcs_obj(out2) if out2 else (None, None)
 
         # Equilibrium population (label vs AllC) with EPRG
         out3 = run(EPRG_EXE, ["-j", eprg_j, norm_str, "AllC"])
-        eqpop_c = pick_eq_pop_str_obj(parse_obj(out3)) if out3 else "N/A"
+        eqpop_c = pick_eq_pop_str_obj(out3) if out3 else "N/A"
 
         # Invasion analysis vs AllD
         out4 = run(PRG_EXE,  ["-j", prg_j, norm_str, str(args.Nprg-args.mutant), "AllD", str(args.mutant)])
-        bcmax_d, bcmin_d = pick_invasion_bcs_obj(parse_obj(out4)) if out4 else (None, None)
+        bcmax_d, bcmin_d = pick_invasion_bcs_obj(out4) if out4 else (None, None)
 
         # Equilibrium population (label vs AllD) with EPRG
         out5 = run(EPRG_EXE, ["-j", eprg_j, norm_str, "AllD"])
-        eqpop_d = pick_eq_pop_str_obj(parse_obj(out5)) if out5 else "N/A"
+        eqpop_d = pick_eq_pop_str_obj(out5) if out5 else "N/A"
 
         # 3-species equilibrium (label + AllC + AllD) with EPRG
         out6 = run(EPRG_EXE, ["-j", eprg_j, norm_str])
-        eq1, eq2, eq3 = pick_eq3_obj(parse_obj(out6)) if out6 else (None, None, None)
+        eq1, eq2, eq3 = pick_eq3_obj(out6) if out6 else (None, None, None)
         eq_combo = ",".join([fmt(eq1), fmt(eq2), fmt(eq3)])
 
         rows.append({
@@ -255,13 +238,13 @@ def main():
         b = f"L{k}-IS"
         pair_label = f"{a} vs. {b}"
         out = run(EPRG_EXE, ["-j", eprg_j, a, b])
-        eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
+        eq_pop = pick_eq_pop_str_obj(out) if out else "N/A"
         pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
 
     for a, b in [("L1v", "L1v-IS"), ("L2v", "L2v-IS")]:
         pair_label = f"{a} vs. {b}"
         out = run(EPRG_EXE, ["-j", eprg_j, a, b])
-        eq_pop = pick_eq_pop_str_obj(parse_obj(out)) if out else "N/A"
+        eq_pop = pick_eq_pop_str_obj(out) if out else "N/A"
         pair_rows.append({"Pair": pair_label, "eq_pop": eq_pop})
 
     print_pair_eqpop_table(pair_rows)

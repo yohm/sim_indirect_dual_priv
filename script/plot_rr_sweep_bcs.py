@@ -13,10 +13,10 @@ Usage:
 #%% Imports and setup
 import csv
 import math
-from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import matplotlib.pyplot as plt
+from utils import figure_path, output_path
 
 #%% Data loading
 
@@ -116,62 +116,56 @@ ymax = 4.0
 xlim = (0.5, 1.0)
 
 
-#%% Load data and plot
-input_path = Path(f"output/R2_sweep_{norm}.tsv")
+def run_one(target_norm: str, *, show_legend: bool, show: bool) -> None:
+  input_path = output_path(f"R2_sweep_{target_norm}.tsv")
+  if not input_path.exists():
+    print(f"[ERROR] File not found: {input_path}")
+    return
 
-if not input_path.exists():
-  print(f"[ERROR] File not found: {input_path}")
-else:
   by_rr = load_rr_bcs(input_path)
-  
   if not by_rr:
     print(f"[ERROR] No valid data rows found in {input_path}")
-  else:
-    print(f"[INFO] Loaded {len(by_rr)} data points from {input_path}")
-    
-    fig, ax = plot_rr_bcs_points(by_rr, norm=norm, ymax=ymax, xlim=xlim, show_legend=True)
-    
-    if save_figure:
-      Path("figures").mkdir(exist_ok=True)
-      output_path = Path(f"figures/rr_sweep_bcs_{norm}.pdf")
-      fig.savefig(output_path)
-      print(f"[INFO] Saved: {output_path}")
-    
-    if show_figure:
-      plt.show()
-    else:
-      plt.close(fig)
+    return
 
+  print(f"[INFO] Loaded {len(by_rr)} data points from {input_path}")
+  fig, ax = plot_rr_bcs_points(by_rr, norm=target_norm, ymax=ymax, xlim=xlim, show_legend=show_legend)
+  if save_figure:
+    out = figure_path(f"rr_sweep_bcs_{target_norm}.pdf")
+    fig.savefig(out)
+    print(f"[INFO] Saved: {out}")
+  if show:
+    plt.show()
+  else:
+    plt.close(fig)
+
+
+def run_all() -> None:
+  for target_norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
+    input_path = output_path(f"R2_sweep_{target_norm}.tsv")
+    if not input_path.exists():
+      print(f"[WARNING] File not found: {input_path}, skipping")
+      continue
+    by_rr = load_rr_bcs(input_path)
+    if not by_rr:
+      print(f"[WARNING] No valid data for {target_norm}, skipping")
+      continue
+    print(f"[INFO] Processing {target_norm}: {len(by_rr)} data points")
+    fig, ax = plot_rr_bcs_points(by_rr, norm=target_norm, ymax=ymax, xlim=xlim, show_legend=False)
+    if save_figure:
+      out = figure_path(f"rr_sweep_bcs_{target_norm}.pdf")
+      fig.savefig(out)
+      print(f"[INFO] Saved: {out}")
+    plt.close(fig)
+  print("[INFO] All plots completed")
+
+
+#%% Load data and plot
+run_one(norm, show_legend=True, show=show_figure)
 
 
 #%%
 # Plot all norms
-for norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
-  input_path = Path(f"output/R2_sweep_{norm}.tsv")
-  
-  if not input_path.exists():
-    print(f"[WARNING] File not found: {input_path}, skipping")
-    continue
-  
-  by_rr = load_rr_bcs(input_path)
-  
-  if not by_rr:
-    print(f"[WARNING] No valid data for {norm}, skipping")
-    continue
-  
-  print(f"[INFO] Processing {norm}: {len(by_rr)} data points")
-  
-  fig, ax = plot_rr_bcs_points(by_rr, norm=norm, ymax=ymax, xlim=xlim, show_legend=False)
-  
-  if save_figure:
-    Path("figures").mkdir(exist_ok=True)
-    output_path = Path(f"figures/rr_sweep_bcs_{norm}.pdf")
-    fig.savefig(output_path)
-    print(f"[INFO] Saved: {output_path}")
-  
-  plt.close(fig)
-
-print("[INFO] All plots completed")
+run_all()
 
 
 # %%

@@ -12,45 +12,28 @@ Usage:
 """
 
 #%% Imports and setup
-import argparse
-import json
-import subprocess
-import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
 import matplotlib.pyplot as plt
+from utils import dumps_json_arg, figure_path, resolve_build_exe, run_json_command
 
-# Resolve repo root and executables
-ROOT = Path(__file__).resolve().parents[1]
-PRG_EXE = str(ROOT / "cmake-build-release" / "inspect_PrivRepGame")
+PRG_EXE = resolve_build_exe("inspect_PrivRepGame")
 
 
 #%% Helper functions for running simulations
-def run_simulation(exe: str, args: list[str]) -> Optional[dict]:
+def run_simulation(exe: Path, args: list[str]) -> Optional[dict]:
     """Run C++ executable and return parsed JSON output."""
     try:
-        res = subprocess.run([exe] + args, capture_output=True, text=True, check=True)
-        return json.loads(res.stdout)
-    except FileNotFoundError:
-        print(f"[ERROR] Executable not found: {exe}", file=sys.stderr)
-        print(f"[INFO] Please build the project first:", file=sys.stderr)
-        print(f"  cmake -S . -B cmake-build-release -DCMAKE_BUILD_TYPE=Release", file=sys.stderr)
-        print(f"  cmake --build cmake-build-release -j", file=sys.stderr)
-        return None
-    except subprocess.CalledProcessError as e:
-        print(f"[ERROR] Execution failed: {exe} {args}", file=sys.stderr)
-        print(f"{e.stdout}\n{e.stderr}", file=sys.stderr)
-        return None
-    except json.JSONDecodeError as e:
-        print(f"[ERROR] Failed to parse JSON output: {e}", file=sys.stderr)
+        return run_json_command(exe, args)
+    except RuntimeError:
         return None
 
 
 def get_self_cooperation(norm: str, params: dict, N: int) -> Optional[float]:
     """Get self cooperation level for a monomorphic population."""
     print(f"[INFO] Running simulation for {norm} monomorphic population (N={N})...")
-    json_params = json.dumps(params)
+    json_params = dumps_json_arg(params)
     result = run_simulation(PRG_EXE, ["-j", json_params, norm, str(N)])
     if result:
         return result.get("SystemWideCooperationLevel")
@@ -60,7 +43,7 @@ def get_self_cooperation(norm: str, params: dict, N: int) -> Optional[float]:
 def get_bc_range(norm: str, params: dict, N: int, mutant_size: int = 1) -> Tuple[Optional[float], Optional[float]]:
     """Get b/c range where norm is stable against both AllD and AllC mutant invasions."""
     resident_size = N - mutant_size
-    json_params = json.dumps(params)
+    json_params = dumps_json_arg(params)
 
     # Invasion vs AllD (lower bound)
     print(f"[INFO] Running invasion analysis for {norm} vs AllD (N={resident_size}+{mutant_size})...")
@@ -218,36 +201,21 @@ PARAMS = {
 # Norms to compare (EDIT HERE)
 norm1 = "L3"
 norm2 = "L3-IS"
-# Run comparison
-coop1, coop2, bc_range1, bc_range2 = run_compare(norm1, norm2, PARAMS)
-
-#%% Plot 1: Self cooperation level
-from pathlib import Path
-Path("figures").mkdir(exist_ok=True)
-
-print(f"[INFO] Creating self cooperation level plot...")
-fig, ax = plot_cooperation_level(norm1+"-base", norm2, coop1, coop2)
-fig.savefig(f"figures/pc_{norm1}_vs_{norm2}.pdf")
-
-
-#%% Plot 2: b/c range
-print(f"[INFO] Creating b/c range plot...")
-fig,ax = plot_bc_range(norm1+"-base", norm2, bc_range1, bc_range2)
-fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
-
-# %%
 def run_and_plot_all(norm1: str, norm2: str, params: dict):
     coop1, coop2, bc_range1, bc_range2 = run_compare(norm1, norm2, params)
 
     print(f"[INFO] Creating self cooperation level plot...")
     fig, ax = plot_cooperation_level(norm1+"-base", norm2, coop1, coop2)
-    fig.savefig(f"figures/pc_{norm1}_vs_{norm2}.pdf")
+    fig.savefig(figure_path(f"pc_{norm1}_vs_{norm2}.pdf"))
     plt.close(fig)
 
     print(f"[INFO] Creating b/c range plot...")
     fig, ax = plot_bc_range(norm1+"-base", norm2, bc_range1, bc_range2)
-    fig.savefig(f"figures/bc_range_{norm1}_vs_{norm2}.pdf")
+    fig.savefig(figure_path(f"bc_range_{norm1}_vs_{norm2}.pdf"))
     plt.close(fig)
+
+# %%
+run_and_plot_all(norm1, norm2, PARAMS)
 
 # %%
 run_and_plot_all("L1", "L1-IS", PARAMS)

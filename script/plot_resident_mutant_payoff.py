@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Plot resident vs mutant payoffs as a function of mutant fraction f \in [0,1].
 
 - Calls the compiled executable `inspect_PrivRepGame` for each f,
@@ -43,16 +43,16 @@ import argparse
 import json
 import math
 import os
-import subprocess
 import sys
 from typing import Optional, Tuple, List
 
 import numpy as np
 import matplotlib.pyplot as plt
+from utils import FIGURES_DIR, load_json_arg, resolve_build_exe, run_command
 
 
 def run(cmd: list, input_text: Optional[str] = None) -> Tuple[int, str, str]:
-    res = subprocess.run(cmd, input=input_text, capture_output=True, text=True)
+    res = run_command(cmd, check=False, input_text=input_text)
     return res.returncode, res.stdout, res.stderr
 
 
@@ -131,25 +131,24 @@ def main():
 
     args = ap.parse_args()
 
-    inspect_prg = os.path.join(args.build_dir, "inspect_PrivRepGame")
-    if not os.path.exists(inspect_prg):
-        print(f"[Error] executable not found: {inspect_prg}", file=sys.stderr)
+    inspect_prg = resolve_build_exe("inspect_PrivRepGame", args.build_dir)
+    if not inspect_prg.exists():
+        print(f"[ERROR] Executable not found: {inspect_prg}", file=sys.stderr)
         sys.exit(1)
 
     # Prepare -j params
     j_arg = None
     if args.params:
         if os.path.exists(args.params):
-            with open(args.params) as f:
-                j_arg = f.read()
+            j_arg = load_json_arg(args.params)
         else:
             j_arg = args.params
 
     if args.N < 2:
-        print("[Error] --N must be >= 2", file=sys.stderr)
+        print("[ERROR] --N must be >= 2", file=sys.stderr)
         sys.exit(1)
     if args.points < 2:
-        print("[Error] --points must be >= 2", file=sys.stderr)
+        print("[ERROR] --points must be >= 2", file=sys.stderr)
         sys.exit(1)
 
     fs = [i / (args.points - 1) for i in range(args.points)]  # includes 0 and 1
@@ -163,7 +162,7 @@ def main():
         try:
             if n_mut == 0:
                 # Resident-only run; compute ONLY resident payoff
-                cmd = [inspect_prg]
+                cmd = [str(inspect_prg)]
                 if j_arg:
                     cmd += ["-j", j_arg]
                 cmd += [args.resident, str(args.N)]
@@ -176,7 +175,7 @@ def main():
                 pm = np.nan  # not computed
             elif n_res == 0:
                 # Mutant-only run; compute ONLY mutant payoff
-                cmd = [inspect_prg]
+                cmd = [str(inspect_prg)]
                 if j_arg:
                     cmd += ["-j", j_arg]
                 cmd += [args.mutant, str(args.N)]
@@ -188,7 +187,7 @@ def main():
                 pr = np.nan  # not computed
                 pm = payoff_homogeneous(c, args.benefit, args.cost)
             else:
-                data = call_prg(inspect_prg, args.resident, args.mutant, n_res, n_mut, j_arg)
+                data = call_prg(str(inspect_prg), args.resident, args.mutant, n_res, n_mut, j_arg)
                 if "NormCooperationLevels" not in data:
                     raise RuntimeError("inspect_PrivRepGame did not return NormCooperationLevels")
                 c_levels = data["NormCooperationLevels"]
@@ -198,7 +197,7 @@ def main():
             pay_res.append(pr)
             pay_mut.append(pm)
         except Exception as e:
-            print(f"[warn] f={f:.3f} failed: {e}", file=sys.stderr)
+            print(f"[ERROR] f={f:.3f} failed: {e}", file=sys.stderr)
             pay_res.append(np.nan)
             pay_mut.append(np.nan)
 
@@ -228,8 +227,8 @@ def main():
     if args.out:
         out_path = args.out
     elif args.save:
-        os.makedirs("figures", exist_ok=True)
-        out_path = os.path.join("figures", f"payoff_{args.resident}_vs_{args.mutant}.{args.format}")
+        FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+        out_path = str(FIGURES_DIR / f"payoff_{args.resident}_vs_{args.mutant}.{args.format}")
 
     # --- save / show ---
     if out_path:

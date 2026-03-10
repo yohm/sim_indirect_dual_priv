@@ -8,15 +8,14 @@ Usage:
 """
 
 #%% Imports
-from pathlib import Path
-from pdf2image import convert_from_path
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from pdf2image import convert_from_path
+from utils import FIGURES_DIR, figure_path
 
 #%% Parameters
-ROOT = Path(__file__).resolve().parents[1]
-figures_dir = ROOT / "script" / "figures"
-output_path = ROOT / "script" / "figures" / "combined_image_pc_bcrange.pdf"
+figures_dir = FIGURES_DIR
+output_path = figure_path("combined_image_pc_bcrange.pdf")
 
 # Norms to include (order matters)
 norms = ["L6", "L8", "L5", "L3"]

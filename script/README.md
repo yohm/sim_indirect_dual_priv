@@ -4,12 +4,13 @@ This directory contains plotting, post-processing, and sweep helpers for the C++
 
 ## Scope
 
-The scripts fall into two groups:
+The scripts fall into three groups:
 
-- scripts that read precomputed TSV or PDF files from `script/output/` and `script/figures/`
 - scripts that call compiled executables such as `inspect_PrivRepGame`, `inspect_EvolPrivRepGame`, or `main_RecoveryAnalysis`
+- scripts that read precomputed TSV files from `script/output/`
+- scripts that combine generated PDFs from `script/figures/`
 
-Many of the older plotting scripts use relative paths such as `output/...` and `figures/...`. In practice, run those scripts from the `script/` directory unless noted otherwise.
+Most plotting scripts now share common path helpers in `script/utils.py`. Notebook-style plotting scripts are still easiest to run from the `script/` directory, while the PDF combination scripts can be run from either the repository root or `script/`.
 
 ## Python requirements
 
@@ -72,7 +73,7 @@ Expected outputs include:
 
 ## 2. Create individual figures
 
-The following scripts are primarily notebook-style scripts with `#%%` cells. They are easiest to run from `script/` in VS Code interactive mode, or as plain Python scripts after editing the parameter cell near the bottom.
+The following scripts are primarily notebook-style scripts with `#%%` cells. They are easiest to run from `script/` in VS Code interactive mode, or as plain Python scripts after editing the parameter cell near the bottom. Most of them now expose `run_one()` / `run_all()` blocks near the end so the execution flow is easier to follow.
 
 ```bash
 cd script
@@ -109,6 +110,12 @@ Representative outputs:
 - `plot_triadic_competition.py`
   - calls `inspect_EvolPrivRepGame`
   - writes triadic competition diagrams
+- `plot_recovery_time_vs_N.py`
+  - calls `main_RecoveryAnalysis`
+  - runs recovery-time sweeps over population size
+- `plot_resident_mutant_payoff.py`
+  - CLI tool rather than notebook-style
+  - calls `inspect_PrivRepGame` for each mutant fraction
 
 ## 3. Combine figures
 
@@ -185,9 +192,16 @@ script/
 
 `image.txt` is a transient output produced by `inspect_PrivRepGame -g` and may be overwritten.
 
+`script/utils.py` centralizes the shared path and subprocess helpers used by the refactored scripts:
+
+- build executable resolution under `cmake-build-release/`
+- JSON `-j` argument formatting and parsing
+- `script/output/` and `script/figures/` path creation
+- common subprocess error reporting
+
 ## Caveats
 
 - Several scripts are parameterized by variables in the source rather than command-line flags.
-- Some scripts assume the current working directory is `script/`.
+- Notebook-style scripts are still intended to be run from `script/`.
 - Most plotting scripts do not validate missing intermediate files beyond simple existence checks.
 - Generated PDFs and TSVs are outputs, not authoritative inputs.

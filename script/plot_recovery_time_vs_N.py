@@ -14,20 +14,20 @@ Example (from repo root, assuming cmake-build-release already built):
 import csv
 import json
 import os
-import subprocess
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+from utils import dumps_json_arg, figure_path, run_command, resolve_build_exe
 
 
 # %%
 def run_recovery_sample(exe_path: str, norm: str, params: Dict) -> Dict:
     """Invoke main_RecoveryAnalysis with the provided params and return parsed JSON."""
-    params_str = json.dumps(params, separators=(",", ":"))
+    params_str = dumps_json_arg(params)
     cmd = [exe_path, "-j", params_str, norm]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = run_command(cmd, check=False)
     if res.returncode != 0:
         raise RuntimeError(
             f"main_RecoveryAnalysis failed for N={params.get('N')}: {res.stderr.strip()}"
@@ -91,8 +91,8 @@ STEP = 1
 NUM_SAMPLES = 100000
 MAX_T = 10000
 SEED = 123456789
-BUILD_DIR = "../cmake-build-release"
-EXE_PATH = os.path.join(BUILD_DIR, "main_RecoveryAnalysis")
+BUILD_DIR = "cmake-build-release"
+EXE_PATH = str(resolve_build_exe("main_RecoveryAnalysis", BUILD_DIR))
 OUTPUT_PATH = None #"figures/recovery_time_vs_N.png"  # set to None to skip saving
 SHOW_PLOT = True
 THEORETICAL_DATA_PATH = "Recoverytimes_L6IS.csv"  # e.g., "data/theory_recovery.csv"
@@ -100,7 +100,7 @@ THEORETICAL_DATA_PATH = "Recoverytimes_L6IS.csv"  # e.g., "data/theory_recovery.
 
 # %%
 # RUN SWEEP
-if not os.path.exists(EXE_PATH):
+if not resolve_build_exe("main_RecoveryAnalysis", BUILD_DIR).exists():
     raise FileNotFoundError(f"main_RecoveryAnalysis not found at {EXE_PATH}")
 
 CONFIG = SweepConfig(
@@ -177,7 +177,7 @@ MULTI_NUM_SAMPLES = 100000
 MULTI_MAX_T = 1000000
 MULTI_SEED = SEED
 MULTI_EXE_PATH = EXE_PATH
-MULTI_OUTPUT_PATH = "figures/recovery_time_vs_N_multi.pdf"
+MULTI_OUTPUT_PATH = str(figure_path("recovery_time_vs_N_multi.pdf"))
 MULTI_RESULTS_PATH = "data/recovery_time_vs_N_multi.tsv"  # set to None to skip saving/loading
 MULTI_SHOW_PLOT = True
 

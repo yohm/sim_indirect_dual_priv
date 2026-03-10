@@ -13,10 +13,10 @@ Usage:
 
 #%% Imports and setup
 import csv
-from pathlib import Path
 from typing import List, Tuple
 
 import matplotlib.pyplot as plt
+from utils import figure_path, output_path
 
 #%% Data loading
 
@@ -90,61 +90,54 @@ save_figure = True
 show_figure = True
 
 
-#%% Load data and plot
-input_path = Path(f"output/R2_sweep_{norm}.tsv")
+def run_one(target_norm: str, *, show_legend: bool, show: bool) -> None:
+  input_path = output_path(f"R2_sweep_{target_norm}.tsv")
+  if not input_path.exists():
+    print(f"[ERROR] File not found: {input_path}")
+    return
 
-if not input_path.exists():
-  print(f"[ERROR] File not found: {input_path}")
-else:
   xs, ys, rrs = load_rr_sweep(input_path)
-  
   if not xs:
     print(f"[ERROR] No valid data rows found in {input_path}")
-  else:
-    print(f"[INFO] Loaded {len(xs)} data points from {input_path}")
-    
-    fig, ax = plot_rr_sweep(xs, ys, rrs, norm=norm, show_legend=True)
-    
-    if save_figure:
-      Path("figures").mkdir(exist_ok=True)
-      output_path = Path(f"figures/rr_sweep_{norm}.pdf")
-      fig.savefig(output_path)
-      print(f"[INFO] Saved: {output_path}")
-    
-    if show_figure:
-      plt.show()
-    else:
-      plt.close(fig)
+    return
 
+  print(f"[INFO] Loaded {len(xs)} data points from {input_path}")
+  fig, ax = plot_rr_sweep(xs, ys, rrs, norm=target_norm, show_legend=show_legend)
+  if save_figure:
+    out = figure_path(f"rr_sweep_{target_norm}.pdf")
+    fig.savefig(out)
+    print(f"[INFO] Saved: {out}")
+  if show:
+    plt.show()
+  else:
+    plt.close(fig)
+
+
+def run_all() -> None:
+  for target_norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
+    input_path = output_path(f"R2_sweep_{target_norm}.tsv")
+    if not input_path.exists():
+      print(f"[WARNING] File not found: {input_path}, skipping")
+      continue
+    xs, ys, rrs = load_rr_sweep(input_path)
+    if not xs:
+      print(f"[WARNING] No valid data for {target_norm}, skipping")
+      continue
+    print(f"[INFO] Processing {target_norm}: {len(xs)} data points")
+    fig, ax = plot_rr_sweep(xs, ys, rrs, norm=target_norm, show_legend=(target_norm == "L6"))
+    if save_figure:
+      out = figure_path(f"rr_sweep_{target_norm}.pdf")
+      fig.savefig(out)
+      print(f"[INFO] Saved: {out}")
+    plt.close(fig)
+  print("[INFO] All plots completed")
+
+
+#%% Load data and plot
+run_one(norm, show_legend=True, show=show_figure)
 
 #%%
 # Plot all norms
-for norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:  # L6 already done
-  input_path = Path(f"output/R2_sweep_{norm}.tsv")
-  
-  if not input_path.exists():
-    print(f"[WARNING] File not found: {input_path}, skipping")
-    continue
-  
-  xs, ys, rrs = load_rr_sweep(input_path)
-  
-  if not xs:
-    print(f"[WARNING] No valid data for {norm}, skipping")
-    continue
-  
-  print(f"[INFO] Processing {norm}: {len(xs)} data points")
-  
-  # Show legend only for L6
-  fig, ax = plot_rr_sweep(xs, ys, rrs, norm=norm, show_legend=(norm == "L6"))
-  
-  if save_figure:
-    Path("figures").mkdir(exist_ok=True)
-    output_path = Path(f"figures/rr_sweep_{norm}.pdf")
-    fig.savefig(output_path)
-    print(f"[INFO] Saved: {output_path}")
-  
-  plt.close(fig)
-
-print("[INFO] All plots completed")
+run_all()
 
 # %%

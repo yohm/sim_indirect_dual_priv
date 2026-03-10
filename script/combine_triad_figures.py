@@ -8,14 +8,13 @@ Usage:
 """
 
 #%% Imports
-from pathlib import Path
-from pdf2image import convert_from_path
 import matplotlib.pyplot as plt
+from pdf2image import convert_from_path
+from utils import FIGURES_DIR, figure_path
 
 #%% Parameters
-ROOT = Path(__file__).resolve().parents[1]
-figures_dir = ROOT / "script" / "figures"
-output_path = ROOT / "script" / "figures" / "combined_triads.pdf"
+figures_dir = FIGURES_DIR
+output_path = figure_path("combined_triads.pdf")
 
 # Norms to include (order matters)
 norms = ["L6", "L6-IS", "L8", "L8-IS", "L5", "L5-IS", "L3", "L3-IS"]
@@ -69,7 +68,7 @@ print(f"\n[INFO] Creating combined figure for all other norms...")
 
 # All other norms: L1, L1v, L2, L2v, L4, L7
 norms_other = ["L1", "L1-IS", "L1v", "L1v-IS", "L2", "L2-IS", "L2v", "L2v-IS", "L4", "L4-IS", "L7", "L7-IS"]
-output_path_other = ROOT / "script" / "figures" / "combined_triads_others.pdf"
+output_path_other = figure_path("combined_triads_others.pdf")
 
 # Grid layout: 3 rows x 4 columns (12 panels total)
 nrows_other, ncols_other = 3, 4

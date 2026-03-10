@@ -8,15 +8,14 @@ Usage:
 """
 
 #%% Imports
-from pathlib import Path
-from pdf2image import convert_from_path
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from pdf2image import convert_from_path
+from utils import FIGURES_DIR, figure_path
 
 #%% Parameters
-ROOT = Path(__file__).resolve().parents[1]
-figures_dir = ROOT / "script" / "figures"
-output_path = ROOT / "script" / "figures" / "combined_rr_sweep_bcs.pdf"
+figures_dir = FIGURES_DIR
+output_path = figure_path("combined_rr_sweep_bcs.pdf")
 
 # Norms to include (order matters)
 norms = ["L6", "L8", "L5", "L3"]
@@ -73,7 +72,7 @@ print(f"\n[INFO] Creating combined figure for all other norms...")
 
 # All other norms: top row (L1v, L2v, L4, L7), bottom row (L1, L2)
 norms_other = ["L1v", "L2v", "L4", "L7", "L1", "L2"]
-output_path_other = ROOT / "script" / "figures" / "combined_rr_sweep_bcs_others.pdf"
+output_path_other = figure_path("combined_rr_sweep_bcs_others.pdf")
 
 # Grid layout: 2 rows x 4 columns (8 panels total, 2 empty)
 nrows_other, ncols_other = 2, 4
