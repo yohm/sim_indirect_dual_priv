@@ -15,6 +15,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "CliHelpUtils.hpp"
 #include "CliJsonUtils.hpp"
 #include "Norm.hpp"
 
@@ -165,8 +166,12 @@ int main(int argc, char *argv[]) {
   }
 
   if (args.size() != 1) {
-    std::cerr << "Usage: " << argv[0] << " [-j params.json] norm" << std::endl;
-    std::cerr << "Parameters: N, _seed, max_t, num_samples" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " [options] <norm>\n";
+    std::cerr << "Options:\n";
+    CliHelpUtils::PrintJsonOption(std::cerr);
+    std::cerr << "JSON parameters:\n";
+    std::cerr << "  N, _seed, max_t, num_samples\n";
+    CliHelpUtils::PrintNormFormat(std::cerr);
     return 1;
   }
 

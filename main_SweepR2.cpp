@@ -15,6 +15,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "CliHelpUtils.hpp"
 #include "CliJsonUtils.hpp"
 #include "Norm.hpp"
 #include "PrivRepGame.hpp"
@@ -53,9 +54,9 @@ struct SweepRow {
 void PrintUsage(const char* exe) {
   std::cout << "Usage: " << exe << " [options]\n";
   std::cout << "Options:\n";
-  std::cout << "  --params <json|path> Parameters JSON inline or path\n";
-  std::cout << "  --out <path>         Output TSV path (default: R2_sweep.tsv)\n";
-  std::cout << "  --help               Show this message\n";
+  CliHelpUtils::PrintOption(std::cout, "--params <json|path>", "Parameters JSON inline or file path");
+  CliHelpUtils::PrintOption(std::cout, "--out <path>", "Output TSV path (default: R2_sweep.tsv)");
+  CliHelpUtils::PrintOption(std::cout, "--help", "Show this message");
   std::cout << "\nJSON parameters:\n";
   std::cout << "  base_norm            (string) required\n";
   std::cout << "  N                    (size_t) EvolPrivRepGame population size\n";

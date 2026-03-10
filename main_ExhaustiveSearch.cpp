@@ -13,6 +13,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include "CliHelpUtils.hpp"
 #include "CliJsonUtils.hpp"
 #include "EvolPrivRepGame.hpp"
 #include "PrivRepGame.hpp"
@@ -35,9 +36,9 @@ struct PackedRow {
 void PrintUsage(const char* exe) {
   std::cerr << "Usage: " << exe << " [options]\n";
   std::cerr << "Options:\n";
-  std::cerr << "  -j <json|path>      Simulation parameters (inline JSON or file path)\n";
-  std::cerr << "  --debug-limit <N>   Only evaluate the first N norms (fill rest with defaults)\n";
-  std::cerr << "  --help              Show this message\n";
+  CliHelpUtils::PrintJsonOption(std::cerr);
+  CliHelpUtils::PrintOption(std::cerr, "--debug-limit <N>", "Only evaluate the first N norms");
+  CliHelpUtils::PrintOption(std::cerr, "--help", "Show this message");
   std::cerr << "\nParameters JSON keys (optional):\n";
   std::cerr << "  N, t_init, t_measure, q, mu_impl, mu_percept, mu_assess1, mu_assess2, _seed\n";
 }

@@ -8,6 +8,7 @@
 #include <string>
 
 #include <nlohmann/json.hpp>
+#include "CliHelpUtils.hpp"
 
 namespace CliJsonUtils {
 
@@ -66,10 +67,6 @@ inline void ApplyJsonDefaults(nlohmann::json& target, const nlohmann::json& defa
       target[it.key()] = it.value();
     }
   }
-}
-
-inline constexpr const char* NormFormatHelp() {
-  return "[Norm name] or [ID] or [0xHEX_ID] or [Rd-Rr-P] or [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]";
 }
 
 }  // namespace CliJsonUtils

@@ -4,6 +4,7 @@
 #include <regex>
 #include <icecream.hpp>
 #include <nlohmann/json.hpp>
+#include "CliHelpUtils.hpp"
 #include "CliJsonUtils.hpp"
 #include "EvolPrivRepGame.hpp"
 
@@ -120,14 +121,13 @@ int main(int argc, char *argv[]) {
     PrintCompetition(s1, s2, params, benefit, beta);
   }
   else {
-    std::cerr << "Usage: " << argv[0] << " [-j param.json] norm_string" << std::endl;
-    std::cerr << "       " << argv[0] << " [-j param.json] norm_string1 norm_string2" << std::endl;
-    std::cerr << "Options:" << std::endl;
-    std::cerr << "  -j param.json : set parameters used for evolutionary simulation by json file" << std::endl;
-    std::cerr << "  norm_string : string representation of a norm" << std::endl;
-    std::cerr << "                " << CliJsonUtils::NormFormatHelp() << std::endl;
-    std::cerr << "Default parameters:" << std::endl;
-    std::cerr << "  " << nlohmann::json(EvolPrivRepGame::Parameters{}).dump(2) << std::endl;
+    std::cerr << "Usage: " << argv[0] << " [options] <norm>\n";
+    std::cerr << "       " << argv[0] << " [options] <norm1> <norm2>\n";
+    std::cerr << "Options:\n";
+    CliHelpUtils::PrintJsonOption(std::cerr);
+    std::cerr << "Default parameters:\n";
+    std::cerr << "  " << nlohmann::json(EvolPrivRepGame::Parameters{}).dump(2) << '\n';
+    CliHelpUtils::PrintNormFormat(std::cerr);
     return 1;
   }
 

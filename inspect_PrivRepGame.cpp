@@ -8,6 +8,7 @@
 #include <cmath>
 #include <icecream.hpp>
 #include <nlohmann/json.hpp>
+#include "CliHelpUtils.hpp"
 #include "CliJsonUtils.hpp"
 #include "PrivRepGame.hpp"
 
@@ -70,10 +71,13 @@ int main(int argc, char *argv[]) {
   std::cerr << params.dump(2) << std::endl;
 
   auto show_usage = [&argv, default_params] {
-    std::cerr << "Usage: " << argv[0] << " [-j param.json] norm1 size1 [norm2 size2 ...]" << std::endl;
-    std::cerr << "Default parameters:" << std::endl;
-    std::cerr << "  " << default_params.dump(2) << std::endl;
-    std::cerr << "Norm format: " << CliJsonUtils::NormFormatHelp() << std::endl;
+    std::cerr << "Usage: " << argv[0] << " [options] <norm1> <size1> [<norm2> <size2> ...]\n";
+    std::cerr << "Options:\n";
+    CliHelpUtils::PrintJsonOption(std::cerr);
+    CliHelpUtils::PrintOption(std::cerr, "-g", "Include average reputations and write image.txt");
+    std::cerr << "Default parameters:\n";
+    std::cerr << "  " << default_params.dump(2) << '\n';
+    CliHelpUtils::PrintNormFormat(std::cerr);
   };
 
   auto start = std::chrono::high_resolution_clock::now();

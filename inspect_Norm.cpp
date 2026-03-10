@@ -5,6 +5,7 @@
 #include <regex>
 #include <vector>
 #include <set>
+#include "CliHelpUtils.hpp"
 #include "Norm.hpp"
 
 constexpr Reputation B = Reputation::B, G = Reputation::G;
@@ -36,11 +37,11 @@ int main(int argc, char** argv) {
     }
   }
   else {   // no arguments
-    std::cerr << "Usage: " << argv[0] << " [options] norm [other norms]" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " [options] <norm> [other norms]\n";
     std::cerr << "Options:" << std::endl;
-    std::cerr << "  -s         : swap G and B" << std::endl;
-    std::cerr << "Norm format: [Norm name] or [ID] or [0xHEX_ID] or [Rd-Rr-P] or [c1 c2 c3 c4 g1 g2 g3 g4 g5 g6 g7 g8 r1 r2 r3 r4]" << std::endl;
-    return 0;
+    CliHelpUtils::PrintOption(std::cerr, "-s", "Swap good and bad labels");
+    CliHelpUtils::PrintNormFormat(std::cerr);
+    return 1;
   }
 
   return 0;
