@@ -14,6 +14,7 @@ Usage:
 import csv
 import math
 from typing import Dict, Optional, Tuple
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 from utils import figure_path, output_path

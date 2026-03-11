@@ -178,56 +178,62 @@ MULTI_MAX_T = 1000000
 MULTI_SEED = SEED
 MULTI_EXE_PATH = EXE_PATH
 MULTI_OUTPUT_PATH = str(figure_path("recovery_time_vs_N_multi.pdf"))
-MULTI_RESULTS_PATH = "data/recovery_time_vs_N_multi.tsv"  # set to None to skip saving/loading
+MULTI_RESULTS_PATH = "output/recovery_time_vs_N_multi.tsv"  # set to None to skip saving/loading
 MULTI_SHOW_PLOT = True
 
 
 # %%
 # MULTI-NORM SWEEP
 multi_norm_results = {}
-for norm_idx, norm in enumerate(NORMS_TO_SWEEP):
-    norm_seed = MULTI_SEED + norm_idx * 56789
-    multi_cfg = SweepConfig(
-        norm=norm,
-        min_N=MULTI_MIN_N,
-        max_N=MULTI_MAX_N,
-        step=MULTI_STEP,
-        num_samples=MULTI_NUM_SAMPLES,
-        max_t=MULTI_MAX_T,
-        seed=norm_seed,
-        exe_path=MULTI_EXE_PATH,
-    )
-    (
-        norm_n_values,
-        norm_avg_arr,
-        norm_err_arr,
-        norm_recoveries,
-    ) = collect_recovery_stats(multi_cfg)
-    multi_norm_results[norm] = {
-        "N": norm_n_values,
-        "avg": norm_avg_arr,
-        "err": norm_err_arr,
-        "recoveries": norm_recoveries,
-    }
+if MULTI_RESULTS_PATH and os.path.exists(MULTI_RESULTS_PATH):
+    print(f"[Info] Skipping multi-norm sweep; results already exist at {MULTI_RESULTS_PATH}")
+else:
+    for norm_idx, norm in enumerate(NORMS_TO_SWEEP):
+        norm_seed = MULTI_SEED + norm_idx * 56789
+        multi_cfg = SweepConfig(
+            norm=norm,
+            min_N=MULTI_MIN_N,
+            max_N=MULTI_MAX_N,
+            step=MULTI_STEP,
+            num_samples=MULTI_NUM_SAMPLES,
+            max_t=MULTI_MAX_T,
+            seed=norm_seed,
+            exe_path=MULTI_EXE_PATH,
+        )
+        (
+            norm_n_values,
+            norm_avg_arr,
+            norm_err_arr,
+            norm_recoveries,
+        ) = collect_recovery_stats(multi_cfg)
+        multi_norm_results[norm] = {
+            "N": norm_n_values,
+            "avg": norm_avg_arr,
+            "err": norm_err_arr,
+            "recoveries": norm_recoveries,
+        }
 
 # %%
 # MULTI-NORM SAVE RESULTS
-if MULTI_RESULTS_PATH and multi_norm_results:
-    out_dir = os.path.dirname(MULTI_RESULTS_PATH)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
-    with open(MULTI_RESULTS_PATH, "w", newline="") as fp:
-        writer = csv.writer(fp, delimiter="\t")
-        writer.writerow(["norm", "N", "avg", "std_err", "num_recoveries"])
-        for norm, result in multi_norm_results.items():
-            for n, avg, err, rec in zip(
-                result["N"],
-                result["avg"],
-                result["err"],
-                result["recoveries"],
-            ):
-                writer.writerow([norm, int(n), float(avg), float(err), int(rec)])
-    print(f"[Info] Saved multi-norm sweep results to {MULTI_RESULTS_PATH}")
+if MULTI_RESULTS_PATH and os.path.exists(MULTI_RESULTS_PATH):
+    print(f"[Info] Skipping multi-norm sweep; results already exist at {MULTI_RESULTS_PATH}")
+else:
+    if MULTI_RESULTS_PATH and multi_norm_results:
+        out_dir = os.path.dirname(MULTI_RESULTS_PATH)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+        with open(MULTI_RESULTS_PATH, "w", newline="") as fp:
+            writer = csv.writer(fp, delimiter="\t")
+            writer.writerow(["norm", "N", "avg", "std_err", "num_recoveries"])
+            for norm, result in multi_norm_results.items():
+                for n, avg, err, rec in zip(
+                    result["N"],
+                    result["avg"],
+                    result["err"],
+                    result["recoveries"],
+                ):
+                    writer.writerow([norm, int(n), float(avg), float(err), int(rec)])
+        print(f"[Info] Saved multi-norm sweep results to {MULTI_RESULTS_PATH}")
 
 # %%
 # MULTI-NORM LOAD RESULTS

@@ -14,6 +14,7 @@ Usage:
 #%% Imports and setup
 import csv
 from typing import List, Tuple
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 from utils import figure_path, output_path

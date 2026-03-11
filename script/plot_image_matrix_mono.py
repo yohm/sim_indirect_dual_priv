@@ -29,7 +29,7 @@ def run_cpp_simulation(
 ) -> np.ndarray | None:
     """Run C++ executable and parse image.txt output."""
     json_params = json.dumps(params)
-    cmd = [exe, "-j", json_params, focal, str(N), "-g"]
+    cmd = [str(exe), "-j", json_params, focal, str(N), "-g"]
     print(f"[INFO] Running command: {' '.join(cmd)}")
     try:
         res = subprocess.run(

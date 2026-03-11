@@ -150,27 +150,6 @@ Run `python script/compare_Norm.py --help` for options.
 
 Sweeps population size and calls `main_RecoveryAnalysis`. This script is useful for recovery-time experiments rather than the main figure pipeline.
 
-### `plot_resident_mutant_payoff.py`
-
-CLI tool that plots resident and mutant payoffs as the mutant fraction changes.
-
-Example:
-
-```bash
-python script/plot_resident_mutant_payoff.py \
-  --resident L6-IS \
-  --mutant AllD \
-  --benefit 5 \
-  --cost 1 \
-  --N 50 \
-  --points 51 \
-  --build-dir cmake-build-release \
-  --params '{"t_init":1000,"t_measure":1000,"q":0.9,"mu_assess1":0.01,"mu_assess2":0.01,"mu_impl":0.0,"mu_percept":0.0,"_seed":123456789}' \
-  --save \
-  --format pdf \
-  --no-show
-```
-
 ## Directory conventions
 
 Typical inputs and outputs in this directory:
