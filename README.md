@@ -1,6 +1,7 @@
-# sim_indirect_dual_priv
+# Indirect reciprocity with dual private assessment
 
-Simulation code for indirect reciprocity under private and public assessment models.
+Source code for the paper by Y. J. Tham, C. Hilbe, and Y. Murase, "Indirect reciprocity with dual private assessment."
+- TODO: add link to publication when available
 
 ## Overview
 
