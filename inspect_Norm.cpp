@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
     }
   }
   else {   // no arguments
+    std::cerr << "[Error] Invalid argument" << std::endl;
     std::cerr << "Usage: " << argv[0] << " [options] <norm> [other norms]\n";
     std::cerr << "Options:" << std::endl;
     CliHelpUtils::PrintOption(std::cerr, "-s", "Swap good and bad labels");
