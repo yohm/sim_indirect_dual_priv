@@ -104,6 +104,13 @@ for row in range(nrows):
 
 plt.tight_layout(pad=0.5)
 
+# Slightly reduce the gap between column 2 and 3 (0-indexed) by shifting column 3 left
+gap_reduction = 0.02
+for i, ax in enumerate(axes_list):
+    if i % ncols >= 3:
+        pos = ax.get_position()
+        ax.set_position([pos.x0 - gap_reduction, pos.y0, pos.width, pos.height])
+
 # Add row labels on the left side (after tight_layout to get correct positions)
 # Define labels with types
 norm_labels = {

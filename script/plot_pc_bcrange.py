@@ -105,7 +105,7 @@ def plot_cooperation_level(norm1: str, norm2: str,
     ax.set_xticklabels([norm1, norm2])
     ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(0.0, 1.0)
-    ax.set_ylabel("self-cooperation level", fontsize=28)
+    ax.set_ylabel("cooperation level", fontsize=38)
 
     _style_axes(ax)
     fig.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.13)
@@ -145,7 +145,7 @@ def plot_bc_range(norm1: str, norm2: str,
     ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(1.0, 4.0)
     ax.set_yticks([1, 2, 3, 4])
-    ax.set_ylabel("$b/c$", fontsize=28)
+    ax.set_ylabel("$b/c$", fontsize=38)
     # ax.set_title(f"Stable b/c Range: {norm1} vs {norm2}", fontsize=16)
 
     _style_axes(ax)
