@@ -80,7 +80,7 @@ def _style_axes(ax, remove_top_right=True):
     if remove_top_right:
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-    ax.tick_params(axis='y', labelsize=18)
+    ax.tick_params(axis='y', labelsize=28)
     ax.tick_params(axis='x', labelsize=36)
 
 
@@ -108,7 +108,7 @@ def plot_cooperation_level(norm1: str, norm2: str,
     ax.set_ylabel("cooperation level", fontsize=38)
 
     _style_axes(ax)
-    fig.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.13)
+    fig.subplots_adjust(left=0.24, right=0.97, top=0.97, bottom=0.13)
     return fig, ax
 
 def plot_bc_range(norm1: str, norm2: str,
@@ -149,7 +149,7 @@ def plot_bc_range(norm1: str, norm2: str,
     # ax.set_title(f"Stable b/c Range: {norm1} vs {norm2}", fontsize=16)
 
     _style_axes(ax)
-    fig.subplots_adjust(left=0.18, right=0.97, top=0.97, bottom=0.13)
+    fig.subplots_adjust(left=0.24, right=0.97, top=0.97, bottom=0.13)
     return fig, ax
 
 
