@@ -17,7 +17,7 @@ figures_dir = FIGURES_DIR
 output_path = figure_path("combined_triads.pdf")
 
 # Norms to include (order matters)
-norms = ["L6", "L6-IS", "L8", "L8-IS", "L5", "L5-IS", "L3", "L3-IS"]
+norms = ["L6", "L8", "L5", "L3", "L6-IS", "L8-IS", "L5-IS", "L3-IS"]
 
 # Grid layout: 2 rows x 4 columns
 nrows, ncols = 2, 4

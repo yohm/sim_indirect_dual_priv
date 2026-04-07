@@ -139,6 +139,9 @@ bbox_col0 = axes_list[0].get_position()  # First column, first row
 bbox_col1 = axes_list[1].get_position()  # Second column, first row
 x_center_01 = (bbox_col0.x0 + bbox_col1.x1) / 2
 y_top = bbox_col0.y1 + 0.06  # Higher position for main label
+fig.text(bbox_col0.x0 + 0.055, y_top, "A", fontsize=34, fontweight='bold',
+         ha='left', va='top', rotation=0,
+         fontfamily='sans-serif', transform=fig.transFigure)
 fig.text(x_center_01, y_top, "image matrix", fontsize=34,
          ha='center', va='top', rotation=0,
          fontfamily='sans-serif', transform=fig.transFigure)
@@ -161,6 +164,9 @@ fig.text(x_center_1, y_sub, "-IS", fontsize=28,
 # Column 2: "self-cooperation level"
 bbox_col2 = axes_list[2].get_position()  # Third column, first row
 x_center_2 = (bbox_col2.x0 + bbox_col2.x1) / 2 + 0.02  # Slight adjustment to the right
+fig.text(bbox_col2.x0-0.01, y_top, "B", fontsize=34, fontweight='bold',
+         ha='left', va='top', rotation=0,
+         fontfamily='sans-serif', transform=fig.transFigure)
 fig.text(x_center_2, y_top, "self-cooperation\nlevel", fontsize=34,
          ha='center', va='top', rotation=0,
          fontfamily='sans-serif', transform=fig.transFigure)
@@ -168,6 +174,9 @@ fig.text(x_center_2, y_top, "self-cooperation\nlevel", fontsize=34,
 # Column 3: "stable $b/c$ range"
 bbox_col3 = axes_list[3].get_position()  # Fourth column, first row
 x_center_3 = (bbox_col3.x0 + bbox_col3.x1) / 2 + 0.02  # Slight adjustment to the right
+fig.text(bbox_col3.x0 + 0.04, y_top, "C", fontsize=34, fontweight='bold',
+         ha='left', va='top', rotation=0,
+         fontfamily='sans-serif', transform=fig.transFigure)
 fig.text(x_center_3, y_top, "stable $b/c$\nrange", fontsize=34,
          ha='center', va='top', rotation=0,
          fontfamily='sans-serif', transform=fig.transFigure)
