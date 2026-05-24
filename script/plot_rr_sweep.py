@@ -122,8 +122,12 @@ def plot_rr_sweep(points: list[RrSweepPoint],
   
   if show_legend:
     handles, labels = ax.get_legend_handles_labels()
+    legend_kwargs = {"loc": "center right"}
+    if norm == "L6":
+      legend_kwargs["bbox_to_anchor"] = (0.87, 0.3)
     # Restore legend order to match BASE_HIGHLIGHTS.
-    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=24, loc="center right",
+    ax.legend(handles[::-1], labels[::-1], frameon=True, framealpha=0.9, fontsize=24,
+              **legend_kwargs,
               labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
   
   # Set title if norm is provided
