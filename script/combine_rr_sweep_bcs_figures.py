@@ -126,7 +126,9 @@ legend_elements = [
     Line2D([0], [0], marker='s', color='w', label='RIS',
            markerfacecolor='darkorange', markersize=15),
     Line2D([0], [0], marker='^', color='w', label='GDT',
-           markerfacecolor='purple', markersize=15)
+           markerfacecolor='purple', markersize=15),
+    Line2D([0], [0], marker='D', color='w', label='ALLG',
+           markerfacecolor='#009E73', markersize=11)
 ]
 legend_ax.legend(handles=legend_elements, loc='center left', frameon=True, fontsize=24,
                 labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
@@ -137,6 +139,53 @@ print(f"[INFO] Saving to {output_path_other}...")
 fig_other.savefig(output_path_other, dpi=150, bbox_inches='tight', 
                   metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
 print(f"[INFO] Saved: {output_path_other}")
+
+#%% Secondary sixteen combined figure
+print(f"\n[INFO] Creating combined figure for secondary sixteen norms...")
+
+secondary_norms = [f"S{i}" for i in range(1, 17)]
+output_path_secondary = figure_path("combined_rr_sweep_bcs_secondary_sixteen.pdf")
+
+# Grid layout: 4 rows x 4 columns
+nrows_secondary, ncols_secondary = 4, 4
+
+print(f"[INFO] Loading {len(secondary_norms)} rr_sweep_bcs figures...")
+secondary_images = []
+for norm in secondary_norms:
+    pdf_path = figures_dir / f"rr_sweep_bcs_{norm}.pdf"
+    if not pdf_path.exists():
+        print(f"[WARNING] File not found: {pdf_path}")
+        secondary_images.append(None)
+        continue
+
+    print(f"[INFO] Converting {pdf_path.name} to image (dpi={dpi})...")
+    img = convert_from_path(pdf_path, dpi=dpi)[0]
+    secondary_images.append(img)
+
+print(f"[INFO] Creating {nrows_secondary}x{ncols_secondary} combined figure...")
+fig_secondary, axes_secondary = plt.subplots(
+    nrows_secondary, ncols_secondary, figsize=(20, 20)
+)
+
+for i, (norm, img) in enumerate(zip(secondary_norms, secondary_images)):
+    row = i // ncols_secondary
+    col = i % ncols_secondary
+    ax = axes_secondary[row, col]
+
+    if img is not None:
+        ax.imshow(img)
+    else:
+        ax.text(0.5, 0.5, f"Missing:\n{norm}",
+                ha='center', va='center', fontsize=16)
+
+    ax.axis('off')
+
+plt.tight_layout(pad=0.5)
+
+print(f"[INFO] Saving to {output_path_secondary}...")
+fig_secondary.savefig(output_path_secondary, dpi=150, bbox_inches='tight',
+                      metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
+print(f"[INFO] Saved: {output_path_secondary}")
 plt.show()
 
 # %%

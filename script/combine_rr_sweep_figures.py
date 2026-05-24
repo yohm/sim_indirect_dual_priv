@@ -110,7 +110,9 @@ legend_elements = [
     Line2D([0], [0], marker='s', color='w', label='RIS',
            markerfacecolor='darkorange', markersize=15),
     Line2D([0], [0], marker='^', color='w', label='GDT',
-           markerfacecolor='purple', markersize=15)
+           markerfacecolor='purple', markersize=15),
+    Line2D([0], [0], marker='D', color='w', label='ALLG',
+           markerfacecolor='#009E73', markersize=11)
 ]
 legend_ax.legend(handles=legend_elements, loc='center left', frameon=True, fontsize=24,
                 labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
@@ -121,6 +123,31 @@ print(f"[INFO] Saving to {output_path_other}...")
 fig_other.savefig(output_path_other, dpi=150, bbox_inches='tight', 
                   metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
 print(f"[INFO] Saved: {output_path_other}")
+
+#%% Secondary sixteen combined figure
+print(f"\n[INFO] Creating combined figure for secondary sixteen norms...")
+
+secondary_norms = [f"S{i}" for i in range(1, 17)]
+output_path_secondary = figure_path("combined_rr_sweep_secondary_sixteen.pdf")
+
+# Grid layout: 4 rows x 4 columns
+nrows_secondary, ncols_secondary = 4, 4
+
+secondary_images = load_pdf_images(secondary_norms, "rr_sweep")
+fig_secondary, axes_secondary = render_grid(
+    secondary_norms,
+    secondary_images,
+    nrows_secondary,
+    ncols_secondary,
+    (20, 20),
+    "combined_rr_sweep_secondary_sixteen.pdf",
+)
+plt.tight_layout(pad=0.5)
+
+print(f"[INFO] Saving to {output_path_secondary}...")
+fig_secondary.savefig(output_path_secondary, dpi=150, bbox_inches='tight',
+                      metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
+print(f"[INFO] Saved: {output_path_secondary}")
 plt.show()
 
 # %%
