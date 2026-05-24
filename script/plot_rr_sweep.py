@@ -39,11 +39,11 @@ class HighlightSpec:
   size: int = DEFAULT_HIGHLIGHT_SIZE
 
 
-BASE_HIGHLIGHTS: list[HighlightSpec] = [
-  HighlightSpec(172, "purple", "^", "GDT"), # "Rr=172 (good-donor-trusting)")
+BASE_HIGHLIGHTS: tuple[HighlightSpec, ...] = (
+  HighlightSpec(204, "navy", "o", "base"), # "Rr=204 (base)")
   HighlightSpec(170, "darkorange", "s", "RIS"), # "Rr=170 (RIS)")
-  HighlightSpec(204, "navy", "o", "base") # "Rr=204 (base)")
-]
+  HighlightSpec(172, "purple", "^", "GDT") # "Rr=172 (good-donor-trusting)")
+)
 
 #%% Data loading
 
@@ -89,13 +89,14 @@ def plot_highlight(ax,
 def plot_rr_sweep(points: list[RrSweepPoint],
                   norm: str = "",
                   show_legend: bool = True,
-                  highlights: list[HighlightSpec] = BASE_HIGHLIGHTS):
+                  highlights: tuple[HighlightSpec, ...] = BASE_HIGHLIGHTS):
   fig, ax = plt.subplots(figsize=(6, 5))
   xs = [point.self_coop for point in points]
   ys = [point.eq0 for point in points]
   ax.scatter(xs, ys, s=30, alpha=1.0, edgecolors="none")
 
-  for highlight in highlights:
+  # Draw in reverse legend order so earlier entries, especially base, stay on top.
+  for highlight in reversed(highlights):
     plot_highlight(ax, points, highlight)
 
   ax.set_xlabel("self-cooperation level", fontsize=30)
@@ -103,9 +104,9 @@ def plot_rr_sweep(points: list[RrSweepPoint],
   ax.tick_params(axis='both', labelsize=20)
   ax.grid(True, linestyle=":", alpha=0.5)
   
-  # Reverse legend order so base appears first
   if show_legend:
     handles, labels = ax.get_legend_handles_labels()
+    # Restore legend order to match BASE_HIGHLIGHTS.
     ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=24, loc="center right",
               labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
   
@@ -128,7 +129,10 @@ save_figure = True
 show_figure = True
 
 
-def run_one(target_norm: str, *, show_legend: bool, show: bool) -> None:
+def run_one(target_norm: str,
+            *,
+            show_legend: bool,
+            show: bool) -> None:
   input_path = output_path(f"R2_sweep_{target_norm}.tsv")
   if not input_path.exists():
     print(f"[ERROR] File not found: {input_path}")
@@ -153,21 +157,9 @@ def run_one(target_norm: str, *, show_legend: bool, show: bool) -> None:
 
 def run_all() -> None:
   for target_norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
-    input_path = output_path(f"R2_sweep_{target_norm}.tsv")
-    if not input_path.exists():
-      print(f"[WARNING] File not found: {input_path}, skipping")
-      continue
-    points = load_rr_sweep(input_path)
-    if not points:
-      print(f"[WARNING] No valid data for {target_norm}, skipping")
-      continue
-    print(f"[INFO] Processing {target_norm}: {len(points)} data points")
-    fig, ax = plot_rr_sweep(points, norm=target_norm, show_legend=(target_norm == "L6"))
-    if save_figure:
-      out = figure_path(f"rr_sweep_{target_norm}.pdf")
-      fig.savefig(out)
-      print(f"[INFO] Saved: {out}")
-    plt.close(fig)
+    run_one(target_norm,
+            show_legend=(target_norm == "L6"),
+            show=False)
   print("[INFO] All plots completed")
 
 
