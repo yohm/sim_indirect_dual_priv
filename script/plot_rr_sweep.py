@@ -42,7 +42,8 @@ class HighlightSpec:
 BASE_HIGHLIGHTS: tuple[HighlightSpec, ...] = (
   HighlightSpec(204, "navy", "o", "base"), # "Rr=204 (base)")
   HighlightSpec(170, "darkorange", "s", "RIS"), # "Rr=170 (RIS)")
-  HighlightSpec(172, "purple", "^", "GDT") # "Rr=172 (good-donor-trusting)")
+  HighlightSpec(172, "purple", "^", "GDT"), # "Rr=172 (good-donor-trusting)")
+  HighlightSpec(255, "#009E73", "D", "ALLG", size=130)
 )
 
 #%% Data loading
