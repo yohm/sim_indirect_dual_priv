@@ -134,7 +134,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, RrBcsPoint],
   for highlight in highlights:
     plot_highlight(ax, by_rr, highlight, xlim, ymax)
 
-  ax.set_xlabel("self cooperation level", fontsize=30)
+  ax.set_xlabel("self-cooperation level", fontsize=30)
   ax.set_ylabel("$b/c$", fontsize=30)
   ax.set_xlim(xlim)
   ax.set_ylim(1.0, ymax)
