@@ -20,8 +20,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from utils import figure_path, output_path
 
-RrBcsPoint = Tuple[float, Optional[float], Optional[float]]
 DEFAULT_HIGHLIGHT_SIZE = 250
+
+
+@dataclass(frozen=True)
+class RrBcsPoint:
+  self_coop: float
+  bc_min: Optional[float]
+  bc_max: Optional[float]
 
 
 @dataclass(frozen=True)
@@ -36,9 +42,10 @@ class HighlightSpec:
 BASE_HIGHLIGHTS: list[HighlightSpec] = [
   HighlightSpec(204, "navy", "o", "base"),
   HighlightSpec(170, "darkorange", "s", "RIS"),
-  HighlightSpec(172, "purple", "^", "GDT")
+  HighlightSpec(172, "purple", "^", "GDT"),
+  HighlightSpec(255, "#009E73", "D", "ALLG", size=130)
 ]
-ALLG_HIGHLIGHT = HighlightSpec(255, "#009E73", "D", "ALLG", size=150)
+# ALLG_HIGHLIGHT = HighlightSpec(255, "#009E73", "D", "ALLG", size=130)
 
 #%% Data loading
 
@@ -69,7 +76,7 @@ def load_rr_bcs(path: Path) -> Dict[int, RrBcsPoint]:
         bc_max = parse_optional_float(row[3])
       except ValueError:
         continue
-      by_rr[rr] = (self_coop, bc_min, bc_max)
+      by_rr[rr] = RrBcsPoint(self_coop, bc_min, bc_max)
 
   return by_rr
 
@@ -80,6 +87,26 @@ def format_norm_label(norm: str) -> str:
   if norm.endswith("-IS"):
     return norm[:-3] + "-RIS"
   return norm
+
+
+def plot_highlight(ax,
+                   by_rr: Dict[int, RrBcsPoint],
+                   highlight: HighlightSpec,
+                   xlim: Tuple[float, float],
+                   ymax: float) -> None:
+  plotted_in_range = False
+  if highlight.rr in by_rr:
+    point = by_rr[highlight.rr]
+    if point.bc_min is not None and math.isfinite(point.bc_min):
+      if xlim[0] <= point.self_coop <= xlim[1] and 1.0 <= point.bc_min <= ymax:
+        ax.scatter([point.self_coop], [point.bc_min], s=highlight.size, color=highlight.color,
+                   marker=highlight.marker, zorder=6, label=highlight.label)
+        plotted_in_range = True
+  if not plotted_in_range:
+    # Keep legend entry even when the highlighted point is outside axes.
+    ax.scatter([xlim[0] - 1], [ymax + 1], s=highlight.size,
+               color=highlight.color, marker=highlight.marker,
+               label=highlight.label, clip_on=True)
 
 
 def plot_rr_bcs_points(by_rr: Dict[int, RrBcsPoint],
@@ -94,29 +121,17 @@ def plot_rr_bcs_points(by_rr: Dict[int, RrBcsPoint],
   ax.spines['right'].set_visible(False)
 
   xs, ys = [], []
-  for rr, (self_coop, bc_min, _) in by_rr.items():
-    if bc_min is None or not math.isfinite(bc_min):
+  for point in by_rr.values():
+    if point.bc_min is None or not math.isfinite(point.bc_min):
       continue
-    xs.append(self_coop)
-    ys.append(bc_min)
+    xs.append(point.self_coop)
+    ys.append(point.bc_min)
   ax.scatter(xs, ys, s=30, color="tab:blue", alpha=1.0, edgecolors="none")
 
   if highlights is None:
     highlights = BASE_HIGHLIGHTS
   for highlight in highlights:
-    plotted_in_range = False
-    if highlight.rr in by_rr:
-      x, y0, _ = by_rr[highlight.rr]
-      if y0 is not None and math.isfinite(y0):
-        if xlim[0] <= x <= xlim[1] and 1.0 <= y0 <= ymax:
-          ax.scatter([x], [y0], s=highlight.size, color=highlight.color,
-                     marker=highlight.marker, zorder=6, label=highlight.label)
-          plotted_in_range = True
-    if not plotted_in_range:
-      # Keep legend entry even when the highlighted point is outside axes.
-      ax.scatter([xlim[0] - 1], [ymax + 1], s=highlight.size,
-                 color=highlight.color, marker=highlight.marker,
-                 label=highlight.label, clip_on=True)
+    plot_highlight(ax, by_rr, highlight, xlim, ymax)
 
   ax.set_xlabel("self cooperation level", fontsize=30)
   ax.set_ylabel("$b/c$", fontsize=30)
@@ -185,14 +200,13 @@ def run_one(target_norm: str,
 
 #%% Load data and plot
 run_one(norm, show_legend=True, show=show_figure,
-# run_one("L5", show_legend=True, show=show_figure,
-  extra_highlights=[ALLG_HIGHLIGHT])
+  extra_highlights=[])
 
 
 #%%
 # Plot all norms
 for target_norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
-  run_one(target_norm, show_legend=False, show=False)
+  run_one(target_norm, show_legend=False, show=False, extra_highlights=[])
 print("[INFO] All plots completed")
 
 
@@ -202,7 +216,7 @@ run_one(
   "S1",
   show_legend=True,
   show=show_figure,
-  extra_highlights=[ALLG_HIGHLIGHT],
+  extra_highlights=[],
 )
 
 
@@ -214,7 +228,7 @@ for i in range(2, 17):
     target_norm,
     show_legend=False,
     show=False,
-    extra_highlights=[ALLG_HIGHLIGHT],
+    extra_highlights=[],
   )
 
 
