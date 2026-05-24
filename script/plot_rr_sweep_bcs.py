@@ -65,7 +65,8 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
                        norm: str = "",
                        ymax: float = 5.0,
                        xlim: Tuple[float, float] = (0.5, 1.0),
-                       show_legend: bool = True):
+                       show_legend: bool = True,
+                       highlights: Optional[list[Tuple[int, str, str, str]]] = None):
   fig, ax = plt.subplots(figsize=(6, 5))
   ax.tick_params(axis='both', labelsize=20)
   ax.spines['top'].set_visible(False)
@@ -79,20 +80,23 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
     ys.append(bc_min)
   ax.scatter(xs, ys, s=30, color="tab:blue", alpha=1.0, edgecolors="none")
 
-  highlights = [
-    (172, "purple", "^", "GDT"),
-    (170, "darkorange", "s", "RIS"),
-    (204, "navy", "o", "base")
-  ]
+  if highlights is None:
+    highlights = [
+      (172, "purple", "^", "GDT"),
+      (170, "darkorange", "s", "RIS"),
+      (204, "navy", "o", "base"),
+    ]
   for target_rr, color, marker, label in highlights:
+    plotted_in_range = False
     if target_rr in by_rr:
       x, y0, _ = by_rr[target_rr]
       if y0 is not None and math.isfinite(y0):
-        # Plot point even if outside ylim, clip it for display but keep label for legend
-        ax.scatter([x], [y0], s=250, color=color, marker=marker, zorder=6, label=label, clip_on=False)
-      else:
-        # If data is invalid but we want it in legend, plot a dummy point outside the plot area
-        ax.scatter([xlim[0] - 1], [ymax + 1], s=250, color=color, marker=marker, label=label, clip_on=True)
+        if xlim[0] <= x <= xlim[1] and 1.0 <= y0 <= ymax:
+          ax.scatter([x], [y0], s=250, color=color, marker=marker, zorder=6, label=label)
+          plotted_in_range = True
+    if not plotted_in_range:
+      # Keep legend entry even when the highlighted point is outside axes.
+      ax.scatter([xlim[0] - 1], [ymax + 1], s=250, color=color, marker=marker, label=label, clip_on=True)
 
   ax.set_xlabel("self cooperation level", fontsize=30)
   ax.set_ylabel("$b/c$", fontsize=30)
@@ -124,7 +128,11 @@ ymax = 4.0
 xlim = (0.5, 1.0)
 
 
-def run_one(target_norm: str, *, show_legend: bool, show: bool) -> None:
+def run_one(target_norm: str,
+            *,
+            show_legend: bool,
+            show: bool,
+            extra_highlights: Optional[list[Tuple[int, str, str, str]]] = None) -> None:
   input_path = output_path(f"R2_sweep_{target_norm}.tsv")
   if not input_path.exists():
     print(f"[ERROR] File not found: {input_path}")
@@ -136,7 +144,20 @@ def run_one(target_norm: str, *, show_legend: bool, show: bool) -> None:
     return
 
   print(f"[INFO] Loaded {len(by_rr)} data points from {input_path}")
-  fig, ax = plot_rr_bcs_points(by_rr, norm=target_norm, ymax=ymax, xlim=xlim, show_legend=show_legend)
+  base_highlights = [
+    (172, "purple", "^", "GDT"),
+    (170, "darkorange", "s", "RIS"),
+    (204, "navy", "o", "base"),
+  ]
+  merged_highlights = (extra_highlights or []) + base_highlights
+  fig, ax = plot_rr_bcs_points(
+    by_rr,
+    norm=target_norm,
+    ymax=ymax,
+    xlim=xlim,
+    show_legend=show_legend,
+    highlights=merged_highlights,
+  )
   if save_figure:
     out = figure_path(f"rr_sweep_bcs_{target_norm}.pdf")
     fig.savefig(out)
@@ -168,12 +189,36 @@ def run_all() -> None:
 
 
 #%% Load data and plot
-run_one(norm, show_legend=True, show=show_figure)
+run_one(norm, show_legend=True, show=show_figure,
+# run_one("L5", show_legend=True, show=show_figure,
+  extra_highlights=[(255, "crimson", "D", "ALLG")])
 
 
 #%%
 # Plot all norms
 run_all()
+
+
+# %%
+# Secondary sixteen example
+run_one(
+  "S1",
+  show_legend=True,
+  show=show_figure,
+  extra_highlights=[(255, "crimson", "D", "ALLG")],
+)
+
+
+#%%
+# Run S2-S16 (S1 is already plotted above)
+for i in range(2, 17):
+  target_norm = f"S{i}"
+  run_one(
+    target_norm,
+    show_legend=False,
+    show=False,
+    extra_highlights=[(255, "crimson", "D", "ALLG")],
+  )
 
 
 # %%
