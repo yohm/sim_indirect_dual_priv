@@ -13,18 +13,42 @@ Usage:
 
 #%% Imports and setup
 import csv
-from typing import List, Tuple
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 from utils import figure_path, output_path
 
+
+DEFAULT_HIGHLIGHT_SIZE = 250
+
+
+@dataclass(frozen=True)
+class RrSweepPoint:
+  rr: int
+  self_coop: float
+  eq0: float
+
+
+@dataclass(frozen=True)
+class HighlightSpec:
+  rr: int
+  color: str
+  marker: str
+  label: str
+  size: int = DEFAULT_HIGHLIGHT_SIZE
+
+
+BASE_HIGHLIGHTS: list[HighlightSpec] = [
+  HighlightSpec(172, "purple", "^", "GDT"), # "Rr=172 (good-donor-trusting)")
+  HighlightSpec(170, "darkorange", "s", "RIS"), # "Rr=170 (RIS)")
+  HighlightSpec(204, "navy", "o", "base") # "Rr=204 (base)")
+]
+
 #%% Data loading
 
-def load_rr_sweep(path: Path) -> Tuple[List[float], List[float], List[int]]:
-  xs: List[float] = []
-  ys: List[float] = []
-  rrs: List[int] = []
+def load_rr_sweep(path: Path) -> list[RrSweepPoint]:
+  points: list[RrSweepPoint] = []
 
   with path.open("r", newline="") as f:
     reader = csv.reader(f, delimiter="\t")
@@ -39,10 +63,8 @@ def load_rr_sweep(path: Path) -> Tuple[List[float], List[float], List[int]]:
         eq0 = float(row[5])
       except ValueError:
         continue
-      rrs.append(rr)
-      xs.append(self_coop)
-      ys.append(eq0)
-  return xs, ys, rrs
+      points.append(RrSweepPoint(rr, self_coop, eq0))
+  return points
 
 #%% Plotting helper
 
@@ -53,20 +75,28 @@ def format_norm_label(norm: str) -> str:
   return norm
 
 
-def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int], norm: str = "", show_legend: bool = True):
+def plot_highlight(ax,
+                   points: list[RrSweepPoint],
+                   highlight: HighlightSpec) -> None:
+  highlighted_points = [point for point in points if point.rr == highlight.rr]
+  if highlighted_points:
+    ax.scatter([point.self_coop for point in highlighted_points],
+               [point.eq0 for point in highlighted_points],
+               s=highlight.size, color=highlight.color,
+               marker=highlight.marker, label=highlight.label)
+
+
+def plot_rr_sweep(points: list[RrSweepPoint],
+                  norm: str = "",
+                  show_legend: bool = True,
+                  highlights: list[HighlightSpec] = BASE_HIGHLIGHTS):
   fig, ax = plt.subplots(figsize=(6, 5))
+  xs = [point.self_coop for point in points]
+  ys = [point.eq0 for point in points]
   ax.scatter(xs, ys, s=30, alpha=1.0, edgecolors="none")
 
-  highlights = [
-    (172, "purple", "^", "GDT"), # "Rr=172 (good-donor-trusting)")
-    (170, "darkorange", "s", "RIS"), # "Rr=170 (RIS)")
-    (204, "navy", "o", "base") # "Rr=204 (base)")
-  ]
-  for target, color, marker, label in highlights:
-    idxs = [i for i, rr in enumerate(rrs) if rr == target]
-    if idxs:
-      ax.scatter([xs[i] for i in idxs], [ys[i] for i in idxs], s=250,
-                 color=color, marker=marker, label=label)
+  for highlight in highlights:
+    plot_highlight(ax, points, highlight)
 
   ax.set_xlabel("self-cooperation level", fontsize=30)
   ax.set_ylabel("equilibrium fraction", fontsize=30)
@@ -104,13 +134,13 @@ def run_one(target_norm: str, *, show_legend: bool, show: bool) -> None:
     print(f"[ERROR] File not found: {input_path}")
     return
 
-  xs, ys, rrs = load_rr_sweep(input_path)
-  if not xs:
+  points = load_rr_sweep(input_path)
+  if not points:
     print(f"[ERROR] No valid data rows found in {input_path}")
     return
 
-  print(f"[INFO] Loaded {len(xs)} data points from {input_path}")
-  fig, ax = plot_rr_sweep(xs, ys, rrs, norm=target_norm, show_legend=show_legend)
+  print(f"[INFO] Loaded {len(points)} data points from {input_path}")
+  fig, ax = plot_rr_sweep(points, norm=target_norm, show_legend=show_legend)
   if save_figure:
     out = figure_path(f"rr_sweep_{target_norm}.pdf")
     fig.savefig(out)
@@ -127,12 +157,12 @@ def run_all() -> None:
     if not input_path.exists():
       print(f"[WARNING] File not found: {input_path}, skipping")
       continue
-    xs, ys, rrs = load_rr_sweep(input_path)
-    if not xs:
+    points = load_rr_sweep(input_path)
+    if not points:
       print(f"[WARNING] No valid data for {target_norm}, skipping")
       continue
-    print(f"[INFO] Processing {target_norm}: {len(xs)} data points")
-    fig, ax = plot_rr_sweep(xs, ys, rrs, norm=target_norm, show_legend=(target_norm == "L6"))
+    print(f"[INFO] Processing {target_norm}: {len(points)} data points")
+    fig, ax = plot_rr_sweep(points, norm=target_norm, show_legend=(target_norm == "L6"))
     if save_figure:
       out = figure_path(f"rr_sweep_{target_norm}.pdf")
       fig.savefig(out)
