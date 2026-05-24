@@ -13,6 +13,7 @@ Usage:
 #%% Imports and setup
 import csv
 import math
+from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 from pathlib import Path
 
@@ -20,14 +21,24 @@ import matplotlib.pyplot as plt
 from utils import figure_path, output_path
 
 RrBcsPoint = Tuple[float, Optional[float], Optional[float]]
-HighlightSpec = Tuple[int, str, str, str]
+DEFAULT_HIGHLIGHT_SIZE = 250
+
+
+@dataclass(frozen=True)
+class HighlightSpec:
+  rr: int
+  color: str
+  marker: str
+  label: str
+  size: int = DEFAULT_HIGHLIGHT_SIZE
+
 
 BASE_HIGHLIGHTS: list[HighlightSpec] = [
-  (204, "navy", "o", "base"),
-  (170, "darkorange", "s", "RIS"),
-  (172, "purple", "^", "GDT"),
+  HighlightSpec(204, "navy", "o", "base"),
+  HighlightSpec(170, "darkorange", "s", "RIS"),
+  HighlightSpec(172, "purple", "^", "GDT")
 ]
-ALLG_HIGHLIGHT: HighlightSpec = (255, "crimson", "D", "ALLG")
+ALLG_HIGHLIGHT = HighlightSpec(255, "#009E73", "D", "ALLG", size=150)
 
 #%% Data loading
 
@@ -92,17 +103,20 @@ def plot_rr_bcs_points(by_rr: Dict[int, RrBcsPoint],
 
   if highlights is None:
     highlights = BASE_HIGHLIGHTS
-  for target_rr, color, marker, label in highlights:
+  for highlight in highlights:
     plotted_in_range = False
-    if target_rr in by_rr:
-      x, y0, _ = by_rr[target_rr]
+    if highlight.rr in by_rr:
+      x, y0, _ = by_rr[highlight.rr]
       if y0 is not None and math.isfinite(y0):
         if xlim[0] <= x <= xlim[1] and 1.0 <= y0 <= ymax:
-          ax.scatter([x], [y0], s=250, color=color, marker=marker, zorder=6, label=label)
+          ax.scatter([x], [y0], s=highlight.size, color=highlight.color,
+                     marker=highlight.marker, zorder=6, label=highlight.label)
           plotted_in_range = True
     if not plotted_in_range:
       # Keep legend entry even when the highlighted point is outside axes.
-      ax.scatter([xlim[0] - 1], [ymax + 1], s=250, color=color, marker=marker, label=label, clip_on=True)
+      ax.scatter([xlim[0] - 1], [ymax + 1], s=highlight.size,
+                 color=highlight.color, marker=highlight.marker,
+                 label=highlight.label, clip_on=True)
 
   ax.set_xlabel("self cooperation level", fontsize=30)
   ax.set_ylabel("$b/c$", fontsize=30)
