@@ -155,9 +155,9 @@ fig.text(x_center_0, y_sub, "-base", fontsize=28,
          ha='center', va='bottom', rotation=0,
          fontfamily='sans-serif', transform=fig.transFigure)
 
-# Column 1: "-IS"
+# Column 1: "-RIS"
 x_center_1 = (bbox_col1.x0 + bbox_col1.x1) / 2
-fig.text(x_center_1, y_sub, "-IS", fontsize=28,
+fig.text(x_center_1, y_sub, "-RIS", fontsize=28,
          ha='center', va='bottom', rotation=0,
          fontfamily='sans-serif', transform=fig.transFigure)
 

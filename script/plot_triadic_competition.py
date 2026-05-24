@@ -42,6 +42,13 @@ def run_and_parse(exe: Path, norm: str, j_arg: str | None):
 
 def fmt_pct1(x):  return f"{x*100:.1f}%"
 
+def format_norm_label(norm: str) -> str:
+    """Format norm names for display only."""
+    if norm.endswith("-IS"):
+        return norm[:-3] + "-RIS"
+    return norm
+
+
 def fmt_rho(x):
     if isinstance(x, (int, float)):
         return "<0.001" if x < 1e-3 else f"{x:.3f}"
@@ -197,7 +204,7 @@ for norm, (eq, rhos) in results.items():
     # Add "-base" suffix if norm doesn't contain "-"
     display_name = norm if "-" in norm else f"{norm}-base"
     outpath = figure_path(f"triad_{norm}.{output_format}") if save_figure else None
-    draw_triad(display_name, eq, rhos, outpath=outpath, show=show_figure)
+    draw_triad(format_norm_label(display_name), eq, rhos, outpath=outpath, show=show_figure)
 
 #%% Plot all norms
 all_norms = ["L1", "L1-IS", "L1v", "L1v-IS", "L2", "L2-IS", "L2v", "L2v-IS", 
@@ -211,7 +218,7 @@ for norm in all_norms:
         # Add "-base" suffix if norm doesn't contain "-"
         display_name = norm if "-" in norm else f"{norm}-base"
         outpath = figure_path(f"triad_{norm}.{output_format}") if save_figure else None
-        draw_triad(display_name, eq, rhos, outpath=outpath, show=False)
+        draw_triad(format_norm_label(display_name), eq, rhos, outpath=outpath, show=False)
     except Exception as e:
         print(f"[WARNING] Failed to process {norm}: {e}")
 

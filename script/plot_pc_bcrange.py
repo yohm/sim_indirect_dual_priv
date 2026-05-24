@@ -75,6 +75,13 @@ def get_bc_range(norm: str, params: dict, N: int, mutant_size: int = 1) -> Tuple
 
 
 #%% Plotting functions
+def format_norm_label(norm: str) -> str:
+    """Format norm names for plot labels only."""
+    if norm.endswith("-IS"):
+        return norm[:-3] + "-RIS"
+    return norm
+
+
 def _style_axes(ax, remove_top_right=True):
     """Style axes for cleaner appearance."""
     if remove_top_right:
@@ -102,7 +109,7 @@ def plot_cooperation_level(norm1: str, norm2: str,
         ax.text(x, y, f'{y:.2f}', ha='center', va='bottom', fontsize=24)
     
     ax.set_xticks(xs)
-    ax.set_xticklabels([norm1, norm2])
+    ax.set_xticklabels([format_norm_label(norm1), format_norm_label(norm2)])
     ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(0.0, 1.0)
     ax.set_ylabel("cooperation level", fontsize=38)
@@ -141,7 +148,7 @@ def plot_bc_range(norm1: str, norm2: str,
                 ax.scatter([x], [y1p], s=24, color=c, edgecolors='white', zorder=3)
 
     ax.set_xticks(xs)
-    ax.set_xticklabels([norm1, norm2])
+    ax.set_xticklabels([format_norm_label(norm1), format_norm_label(norm2)])
     ax.set_xlim(-0.6, 1.6)
     ax.set_ylim(1.0, 4.0)
     ax.set_yticks([1, 2, 3, 4])

@@ -46,13 +46,20 @@ def load_rr_sweep(path: Path) -> Tuple[List[float], List[float], List[int]]:
 
 #%% Plotting helper
 
+def format_norm_label(norm: str) -> str:
+  """Format norm names for display only."""
+  if norm.endswith("-IS"):
+    return norm[:-3] + "-RIS"
+  return norm
+
+
 def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int], norm: str = "", show_legend: bool = True):
   fig, ax = plt.subplots(figsize=(6, 5))
   ax.scatter(xs, ys, s=30, alpha=1.0, edgecolors="none")
 
   highlights = [
     (172, "purple", "^", "GDT"), # "Rr=172 (good-donor-trusting)")
-    (170, "darkorange", "s", "IS"), # "Rr=170 (IS)")
+    (170, "darkorange", "s", "RIS"), # "Rr=170 (RIS)")
     (204, "navy", "o", "base") # "Rr=204 (base)")
   ]
   for target, color, marker, label in highlights:
@@ -74,7 +81,7 @@ def plot_rr_sweep(xs: List[float], ys: List[float], rrs: List[int], norm: str = 
   
   # Set title if norm is provided
   if norm:
-    ax.set_title(norm, fontsize=32, pad=20)
+    ax.set_title(format_norm_label(norm), fontsize=32, pad=20)
   
   # Remove top and right spines
   ax.spines['top'].set_visible(False)

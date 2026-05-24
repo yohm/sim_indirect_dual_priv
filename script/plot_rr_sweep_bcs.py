@@ -54,6 +54,13 @@ def load_rr_bcs(path: Path) -> Dict[int, Tuple[float, Optional[float], Optional[
 
 #%% Plotting helpers
 
+def format_norm_label(norm: str) -> str:
+  """Format norm names for display only."""
+  if norm.endswith("-IS"):
+    return norm[:-3] + "-RIS"
+  return norm
+
+
 def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
                        norm: str = "",
                        ymax: float = 5.0,
@@ -74,7 +81,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
 
   highlights = [
     (172, "purple", "^", "GDT"),
-    (170, "darkorange", "s", "IS"),
+    (170, "darkorange", "s", "RIS"),
     (204, "navy", "o", "base")
   ]
   for target_rr, color, marker, label in highlights:
@@ -100,7 +107,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
               labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
   
   if norm:
-    ax.set_title(norm, fontsize=32, pad=20)
+    ax.set_title(format_norm_label(norm), fontsize=32, pad=20)
   
   fig.subplots_adjust(left=0.13, right=0.95, top=0.85, bottom=0.17)
   return fig, ax

@@ -123,7 +123,7 @@ legend_ax.axis('off')
 legend_elements = [
     Line2D([0], [0], marker='o', color='w', label='base',
            markerfacecolor='navy', markersize=15),
-    Line2D([0], [0], marker='s', color='w', label='IS',
+    Line2D([0], [0], marker='s', color='w', label='RIS',
            markerfacecolor='darkorange', markersize=15),
     Line2D([0], [0], marker='^', color='w', label='GDT',
            markerfacecolor='purple', markersize=15)

@@ -82,6 +82,13 @@ def collect_recovery_stats(cfg: SweepConfig) -> Tuple[List[int], np.ndarray, np.
 
     return n_values, np.array(averages, dtype=float), np.array(std_errs, dtype=float), recoveries
 
+
+def format_norm_label(norm: str) -> str:
+    """Format norm names for display only."""
+    if norm.endswith("-IS"):
+        return norm[:-3] + "-RIS"
+    return norm
+
 # %%
 # CONFIG (edit and re-run this cell)
 NORM = "L6-IS"
@@ -136,7 +143,7 @@ ax.errorbar( n_values, avg_arr, yerr=err_arr,
 )
 ax.set_xlabel("Population size N")
 ax.set_ylabel("Average recovery time")
-ax.set_title(f"Recovery time vs N (norm: L6-IS)")
+ax.set_title(f"Recovery time vs N (norm: {format_norm_label(NORM)})")
 #ax.grid(True, linestyle="--", alpha=0.4)
 ax.legend()
 
@@ -301,14 +308,14 @@ for norm, result in multi_norm_results.items():
         markersize=3,
         capsize=2,
         alpha=0.85,
-        label=norm,
+        label=format_norm_label(norm),
     )
 
 # Type labels inside plot area (adjust x/y as needed)
-ax.text(0.96, 0.10, "Type I-IS", transform=ax.transAxes,
+ax.text(0.96, 0.10, "Type I-RIS", transform=ax.transAxes,
     color=norm_colors.get(TYPE1_IS_NORMS[-1], "black"),
     fontsize=12, va="top", ha="right")
-ax.text(0.96, 0.23, "Type I-base\nType II-IS, Type III-IS", transform=ax.transAxes,
+ax.text(0.96, 0.23, "Type I-base\nType II-RIS, Type III-RIS", transform=ax.transAxes,
     color=norm_colors.get(TYPE2_IS_NORMS[-1], "black"),
     fontsize=12, va="bottom", ha="right")
 ax.text(0.96, 0.49, "Type II-base", transform=ax.transAxes,
