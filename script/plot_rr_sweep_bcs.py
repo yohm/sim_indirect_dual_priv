@@ -94,15 +94,16 @@ def plot_highlight(ax,
                    highlight: HighlightSpec,
                    xlim: Tuple[float, float],
                    ymax: float) -> None:
-  plotted_in_range = False
+  is_point_in_axes = False
   if highlight.rr in by_rr:
     point = by_rr[highlight.rr]
     if point.bc_min is not None and math.isfinite(point.bc_min):
       if xlim[0] <= point.self_coop <= xlim[1] and 1.0 <= point.bc_min <= ymax:
         ax.scatter([point.self_coop], [point.bc_min], s=highlight.size, color=highlight.color,
-                   marker=highlight.marker, zorder=6, label=highlight.label)
-        plotted_in_range = True
-  if not plotted_in_range:
+                   marker=highlight.marker, zorder=6, label=highlight.label,
+                   clip_on=False)
+        is_point_in_axes = True
+  if not is_point_in_axes:
     # Keep legend entry even when the highlighted point is outside axes.
     ax.scatter([xlim[0] - 1], [ymax + 1], s=highlight.size,
                color=highlight.color, marker=highlight.marker,
