@@ -19,6 +19,16 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from utils import figure_path, output_path
 
+RrBcsPoint = Tuple[float, Optional[float], Optional[float]]
+HighlightSpec = Tuple[int, str, str, str]
+
+BASE_HIGHLIGHTS: list[HighlightSpec] = [
+  (204, "navy", "o", "base"),
+  (170, "darkorange", "s", "RIS"),
+  (172, "purple", "^", "GDT"),
+]
+ALLG_HIGHLIGHT: HighlightSpec = (255, "crimson", "D", "ALLG")
+
 #%% Data loading
 
 def parse_optional_float(value: str) -> Optional[float]:
@@ -31,8 +41,8 @@ def parse_optional_float(value: str) -> Optional[float]:
     return None
 
 
-def load_rr_bcs(path: Path) -> Dict[int, Tuple[float, Optional[float], Optional[float]]]:
-  by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]] = {}
+def load_rr_bcs(path: Path) -> Dict[int, RrBcsPoint]:
+  by_rr: Dict[int, RrBcsPoint] = {}
 
   with path.open("r", newline="") as f:
     reader = csv.reader(f, delimiter="\t")
@@ -61,12 +71,12 @@ def format_norm_label(norm: str) -> str:
   return norm
 
 
-def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[float]]],
+def plot_rr_bcs_points(by_rr: Dict[int, RrBcsPoint],
                        norm: str = "",
                        ymax: float = 5.0,
                        xlim: Tuple[float, float] = (0.5, 1.0),
                        show_legend: bool = True,
-                       highlights: Optional[list[Tuple[int, str, str, str]]] = None):
+                       highlights: Optional[list[HighlightSpec]] = None):
   fig, ax = plt.subplots(figsize=(6, 5))
   ax.tick_params(axis='both', labelsize=20)
   ax.spines['top'].set_visible(False)
@@ -81,11 +91,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
   ax.scatter(xs, ys, s=30, color="tab:blue", alpha=1.0, edgecolors="none")
 
   if highlights is None:
-    highlights = [
-      (172, "purple", "^", "GDT"),
-      (170, "darkorange", "s", "RIS"),
-      (204, "navy", "o", "base"),
-    ]
+    highlights = BASE_HIGHLIGHTS
   for target_rr, color, marker, label in highlights:
     plotted_in_range = False
     if target_rr in by_rr:
@@ -107,7 +113,7 @@ def plot_rr_bcs_points(by_rr: Dict[int, Tuple[float, Optional[float], Optional[f
   
   if show_legend:
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], frameon=True, fontsize=24, loc="upper right",
+    ax.legend(handles, labels, frameon=True, fontsize=24, loc="upper right",
               labelspacing=0.3, handletextpad=0.5, borderpad=0.4)
   
   if norm:
@@ -132,7 +138,7 @@ def run_one(target_norm: str,
             *,
             show_legend: bool,
             show: bool,
-            extra_highlights: Optional[list[Tuple[int, str, str, str]]] = None) -> None:
+            extra_highlights: Optional[list[HighlightSpec]] = None) -> None:
   input_path = output_path(f"R2_sweep_{target_norm}.tsv")
   if not input_path.exists():
     print(f"[ERROR] File not found: {input_path}")
@@ -144,12 +150,7 @@ def run_one(target_norm: str,
     return
 
   print(f"[INFO] Loaded {len(by_rr)} data points from {input_path}")
-  base_highlights = [
-    (172, "purple", "^", "GDT"),
-    (170, "darkorange", "s", "RIS"),
-    (204, "navy", "o", "base"),
-  ]
-  merged_highlights = (extra_highlights or []) + base_highlights
+  merged_highlights = BASE_HIGHLIGHTS + (extra_highlights or [])
   fig, ax = plot_rr_bcs_points(
     by_rr,
     norm=target_norm,
@@ -168,35 +169,17 @@ def run_one(target_norm: str,
     plt.close(fig)
 
 
-def run_all() -> None:
-  for target_norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
-    input_path = output_path(f"R2_sweep_{target_norm}.tsv")
-    if not input_path.exists():
-      print(f"[WARNING] File not found: {input_path}, skipping")
-      continue
-    by_rr = load_rr_bcs(input_path)
-    if not by_rr:
-      print(f"[WARNING] No valid data for {target_norm}, skipping")
-      continue
-    print(f"[INFO] Processing {target_norm}: {len(by_rr)} data points")
-    fig, ax = plot_rr_bcs_points(by_rr, norm=target_norm, ymax=ymax, xlim=xlim, show_legend=False)
-    if save_figure:
-      out = figure_path(f"rr_sweep_bcs_{target_norm}.pdf")
-      fig.savefig(out)
-      print(f"[INFO] Saved: {out}")
-    plt.close(fig)
-  print("[INFO] All plots completed")
-
-
 #%% Load data and plot
 run_one(norm, show_legend=True, show=show_figure,
 # run_one("L5", show_legend=True, show=show_figure,
-  extra_highlights=[(255, "crimson", "D", "ALLG")])
+  extra_highlights=[ALLG_HIGHLIGHT])
 
 
 #%%
 # Plot all norms
-run_all()
+for target_norm in ["L1", "L1v", "L2", "L2v", "L3", "L4", "L5", "L7", "L8"]:
+  run_one(target_norm, show_legend=False, show=False)
+print("[INFO] All plots completed")
 
 
 # %%
@@ -205,7 +188,7 @@ run_one(
   "S1",
   show_legend=True,
   show=show_figure,
-  extra_highlights=[(255, "crimson", "D", "ALLG")],
+  extra_highlights=[ALLG_HIGHLIGHT],
 )
 
 
@@ -217,7 +200,7 @@ for i in range(2, 17):
     target_norm,
     show_legend=False,
     show=False,
-    extra_highlights=[(255, "crimson", "D", "ALLG")],
+    extra_highlights=[ALLG_HIGHLIGHT],
   )
 
 
