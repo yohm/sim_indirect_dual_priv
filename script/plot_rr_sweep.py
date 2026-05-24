@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from utils import figure_path, output_path
 
 
@@ -76,6 +77,15 @@ def format_norm_label(norm: str) -> str:
   return norm
 
 
+def format_axis_tick(value: float, _position: int) -> str:
+  if abs(value) < 1e-12:
+    value = 0.0
+  label = f"{value:.2f}".rstrip("0").rstrip(".")
+  if "." not in label:
+    label += ".0"
+  return label
+
+
 def plot_highlight(ax,
                    points: list[RrSweepPoint],
                    highlight: HighlightSpec) -> None:
@@ -90,7 +100,8 @@ def plot_highlight(ax,
 def plot_rr_sweep(points: list[RrSweepPoint],
                   norm: str = "",
                   show_legend: bool = True,
-                  highlights: tuple[HighlightSpec, ...] = BASE_HIGHLIGHTS):
+                  highlights: tuple[HighlightSpec, ...] = BASE_HIGHLIGHTS,
+                  xlim: tuple[float, float] | None = None):
   fig, ax = plt.subplots(figsize=(6, 5))
   xs = [point.self_coop for point in points]
   ys = [point.eq0 for point in points]
@@ -102,6 +113,10 @@ def plot_rr_sweep(points: list[RrSweepPoint],
 
   ax.set_xlabel("self-cooperation level", fontsize=30)
   ax.set_ylabel("equilibrium fraction", fontsize=30)
+  if xlim is not None:
+    ax.set_xlim(xlim)
+  ax.xaxis.set_major_formatter(FuncFormatter(format_axis_tick))
+  ax.set_ylim(-0.05, 1.05)
   ax.tick_params(axis='both', labelsize=20)
   ax.grid(True, linestyle=":", alpha=0.5)
   
@@ -133,7 +148,8 @@ show_figure = True
 def run_one(target_norm: str,
             *,
             show_legend: bool,
-            show: bool) -> None:
+            show: bool,
+            xlim: tuple[float, float] | None = None) -> None:
   input_path = output_path(f"R2_sweep_{target_norm}.tsv")
   if not input_path.exists():
     print(f"[ERROR] File not found: {input_path}")
@@ -145,7 +161,7 @@ def run_one(target_norm: str,
     return
 
   print(f"[INFO] Loaded {len(points)} data points from {input_path}")
-  fig, ax = plot_rr_sweep(points, norm=target_norm, show_legend=show_legend)
+  fig, ax = plot_rr_sweep(points, norm=target_norm, show_legend=show_legend, xlim=xlim)
   if save_figure:
     out = figure_path(f"rr_sweep_{target_norm}.pdf")
     fig.savefig(out)
@@ -170,5 +186,27 @@ run_one(norm, show_legend=True, show=show_figure)
 #%%
 # Plot all norms
 run_all()
+
+# %%
+# Secondary sixteen example
+run_one(
+  "S1",
+  show_legend=True,
+  show=show_figure,
+  xlim=(-0.02, 1.02),
+)
+
+
+#%%
+# Run S2-S16 (S1 is already plotted above)
+for i in range(2, 17):
+  target_norm = f"S{i}"
+  run_one(
+    target_norm,
+    show_legend=False,
+    show=False,
+    xlim=(-0.02, 1.02),
+  )
+
 
 # %%
