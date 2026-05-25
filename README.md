@@ -165,12 +165,27 @@ Sweeps the recipient assessment rule `R2` for a base norm and writes a TSV table
 
 ### `main_ExhaustiveSearch`
 
-Searches deterministic third-order norms up to bad/good symmetry. MPI is required.
+Sweeps deterministic donor and recipient assessment rules, with the action rule fixed to Discriminator.
+By default it evaluates all `R1=0..255` and `R2=0..255` combinations, for 65,536 norms total.
+MPI is supported and recommended for full runs.
 
 ```bash
-mpirun -n 4 ./cmake-build-release/main_ExhaustiveSearch
-mpirun -n 4 ./cmake-build-release/main_ExhaustiveSearch -j '{"N":50,"t_init":1000,"t_measure":1000}'
+mpirun -n 4 ./cmake-build-release/main_ExhaustiveSearch \
+  --params '{"N":50,"t_init":1000,"t_measure":1000}' \
+  --out R1R2_sweep.tsv
 ```
+
+For local testing, restrict the rule ranges:
+
+```bash
+./cmake-build-release/main_ExhaustiveSearch \
+  --params '{"N":10,"t_init":10,"t_measure":20,"q":0.9,"_seed":1}' \
+  --rd-start 0 --rd-end 1 \
+  --rr-start 0 --rr-end 2 \
+  --out R1R2_sweep_test.tsv
+```
+
+Output is a TSV with one row per `(R1, R2, Discriminator)` norm. Columns include monomorphic cooperation, invasion thresholds against `AllD` and `AllC`, low-mutation equilibrium cooperation, equilibrium weights for resident/`AllC`/`AllD`, and the corresponding fixation probabilities.
 
 ## Python scripts
 
