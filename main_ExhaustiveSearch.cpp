@@ -23,12 +23,14 @@
 
 constexpr int kRuleStart = 0;
 constexpr int kRuleEnd = 255;
-constexpr int kRuleCount = kRuleEnd - kRuleStart + 1;
-constexpr int kSweepCount = kRuleCount * kRuleCount;
 
 struct ProgramOptions {
   std::optional<std::string> params_arg;
   std::optional<std::string> out_path;
+  int rd_start = kRuleStart;
+  int rd_end = kRuleEnd;
+  int rr_start = kRuleStart;
+  int rr_end = kRuleEnd;
 };
 
 struct SimulationConfig {
@@ -78,6 +80,10 @@ void PrintUsage(const char* exe) {
   std::cout << "Options:\n";
   CliHelpUtils::PrintOption(std::cout, "--params <json|path>", "Parameters JSON inline or file path");
   CliHelpUtils::PrintOption(std::cout, "--out <path>", "Output TSV path (default: R1R2_sweep.tsv)");
+  CliHelpUtils::PrintOption(std::cout, "--rd-start <ID>", "First R1 rule ID to evaluate (default: 0)");
+  CliHelpUtils::PrintOption(std::cout, "--rd-end <ID>", "Last R1 rule ID to evaluate, inclusive (default: 255)");
+  CliHelpUtils::PrintOption(std::cout, "--rr-start <ID>", "First R2 rule ID to evaluate (default: 0)");
+  CliHelpUtils::PrintOption(std::cout, "--rr-end <ID>", "Last R2 rule ID to evaluate, inclusive (default: 255)");
   CliHelpUtils::PrintOption(std::cout, "--help", "Show this message");
   std::cout << "\nJSON parameters:\n";
   std::cout << "  N                    (size_t) EvolPrivRepGame population size\n";
@@ -100,6 +106,33 @@ std::string RequireValue(int argc, char** argv, int& i, const std::string& flag)
   return std::string(argv[++i]);
 }
 
+int ParseRuleID(const std::string& value, const std::string& flag) {
+  int id = 0;
+  try {
+    size_t pos = 0;
+    id = std::stoi(value, &pos);
+    if (pos != value.size()) {
+      throw std::runtime_error("trailing characters");
+    }
+  }
+  catch (const std::exception&) {
+    throw std::runtime_error("invalid rule ID for " + flag + ": " + value);
+  }
+  if (id < kRuleStart || id > kRuleEnd) {
+    throw std::runtime_error(flag + " must be between 0 and 255");
+  }
+  return id;
+}
+
+void ValidateRanges(const ProgramOptions& opt) {
+  if (opt.rd_start > opt.rd_end) {
+    throw std::runtime_error("--rd-start must be <= --rd-end");
+  }
+  if (opt.rr_start > opt.rr_end) {
+    throw std::runtime_error("--rr-start must be <= --rr-end");
+  }
+}
+
 ProgramOptions ParseArgs(int argc, char** argv) {
   if (argc <= 1) {
     PrintUsage(argv[0]);
@@ -119,10 +152,23 @@ ProgramOptions ParseArgs(int argc, char** argv) {
     else if (arg == "--out") {
       opt.out_path = RequireValue(argc, argv, i, arg);
     }
+    else if (arg == "--rd-start") {
+      opt.rd_start = ParseRuleID(RequireValue(argc, argv, i, arg), arg);
+    }
+    else if (arg == "--rd-end") {
+      opt.rd_end = ParseRuleID(RequireValue(argc, argv, i, arg), arg);
+    }
+    else if (arg == "--rr-start") {
+      opt.rr_start = ParseRuleID(RequireValue(argc, argv, i, arg), arg);
+    }
+    else if (arg == "--rr-end") {
+      opt.rr_end = ParseRuleID(RequireValue(argc, argv, i, arg), arg);
+    }
     else {
       throw std::runtime_error("unknown option: " + arg);
     }
   }
+  ValidateRanges(opt);
   return opt;
 }
 
@@ -362,30 +408,35 @@ int main(int argc, char** argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
     SimulationConfig cfg = BuildSimulationConfig(opt);
+    const int rd_count = opt.rd_end - opt.rd_start + 1;
+    const int rr_count = opt.rr_end - opt.rr_start + 1;
+    const int sweep_count = rd_count * rr_count;
     if (world_rank == 0) {
       nlohmann::json cfg_json = nlohmann::json(cfg.params);
       cfg_json["benefit"] = cfg.benefit;
       cfg_json["beta"] = cfg.beta;
       std::cerr << "SimulationConfig: " << cfg_json.dump(2) << '\n';
-      std::cerr << "Sweeping " << kSweepCount << " norms with Discriminator action rule\n";
+      std::cerr << "Sweeping " << sweep_count << " norms with Discriminator action rule"
+                << " (R1=" << opt.rd_start << ".." << opt.rd_end
+                << ", R2=" << opt.rr_start << ".." << opt.rr_end << ")\n";
     }
 
     const Norm allc = Norm::AllC();
     const Norm alld = Norm::AllD();
 
     std::vector<PackedRow> local_rows;
-    size_t reserve = (static_cast<size_t>(kSweepCount) + static_cast<size_t>(world_size) - 1) / static_cast<size_t>(world_size);
+    size_t reserve = (static_cast<size_t>(sweep_count) + static_cast<size_t>(world_size) - 1) / static_cast<size_t>(world_size);
     local_rows.reserve(reserve);
 
-    for (int idx = world_rank; idx < kSweepCount; idx += world_size) {
-      int rd = idx / kRuleCount;
-      int rr = idx % kRuleCount;
+    for (int idx = world_rank; idx < sweep_count; idx += world_size) {
+      int rd = opt.rd_start + idx / rr_count;
+      int rr = opt.rr_start + idx % rr_count;
       Norm candidate = BuildNorm(rd, rr);
       SweepRow row = ComputeSweepRow(rd, rr, candidate, cfg.params, allc, alld, cfg.benefit, cfg.beta);
       local_rows.push_back(PackRow(static_cast<uint64_t>(idx), row));
 
-      if (world_rank == 0 && idx % 256 == 0) {
-        std::cerr << "Progress: processed index " << idx << " / " << kSweepCount << '\n';
+      if (world_rank == 0 && idx % rr_count == 0) {
+        std::cerr << "Progress: processed index " << idx << " / " << sweep_count << '\n';
       }
     }
 
@@ -432,13 +483,13 @@ int main(int argc, char** argv) {
                 MPI_COMM_WORLD);
 
     if (world_rank == 0) {
-      if (gathered_rows.size() != static_cast<size_t>(kSweepCount)) {
+      if (gathered_rows.size() != static_cast<size_t>(sweep_count)) {
         throw std::runtime_error("MPI gather produced inconsistent row count");
       }
 
-      std::vector<PackedRow> rows(static_cast<size_t>(kSweepCount));
+      std::vector<PackedRow> rows(static_cast<size_t>(sweep_count));
       for (const auto& packed : gathered_rows) {
-        if (packed.idx >= static_cast<uint64_t>(kSweepCount)) {
+        if (packed.idx >= static_cast<uint64_t>(sweep_count)) {
           throw std::runtime_error("received row with invalid index");
         }
         rows[static_cast<size_t>(packed.idx)] = packed;
