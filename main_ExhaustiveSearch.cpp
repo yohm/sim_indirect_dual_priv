@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdint>
-#include <filesystem>
+#include <cerrno>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -12,6 +13,9 @@
 #include <string>
 #include <tuple>
 #include <vector>
+
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <nlohmann/json.hpp>
 
@@ -354,15 +358,53 @@ std::string FormatDouble(double value) {
   return oss.str();
 }
 
-void WriteCombinedTable(const std::filesystem::path& path,
-                        const std::vector<PackedRow>& rows) {
-  auto parent = path.parent_path();
-  if (!parent.empty()) {
-    std::filesystem::create_directories(parent);
+void CreateDirectories(const std::string& dir) {
+  if (dir.empty()) {
+    return;
   }
+
+  std::string current;
+  size_t pos = 0;
+  if (dir[0] == '/') {
+    current = "/";
+    pos = 1;
+  }
+
+  while (pos <= dir.size()) {
+    size_t next = dir.find('/', pos);
+    std::string part = dir.substr(pos, next == std::string::npos ? std::string::npos : next - pos);
+    if (!part.empty()) {
+      if (!current.empty() && current.back() != '/') {
+        current += '/';
+      }
+      current += part;
+      if (mkdir(current.c_str(), 0755) != 0 && errno != EEXIST) {
+        throw std::runtime_error("failed to create directory " + current + ": " + std::strerror(errno));
+      }
+    }
+    if (next == std::string::npos) {
+      break;
+    }
+    pos = next + 1;
+  }
+}
+
+std::string ParentPath(const std::string& path) {
+  size_t slash = path.find_last_of('/');
+  if (slash == std::string::npos) {
+    return "";
+  }
+  if (slash == 0) {
+    return "/";
+  }
+  return path.substr(0, slash);
+}
+
+void WriteCombinedTable(const std::string& path, const std::vector<PackedRow>& rows) {
+  CreateDirectories(ParentPath(path));
   std::ofstream fout(path);
   if (!fout) {
-    throw std::runtime_error("failed to open output file: " + path.string());
+    throw std::runtime_error("failed to open output file: " + path);
   }
 
   fout << "# rd\trr\tself_coop\tbc_min(AllD)\tbc_max(AllC)\teq_coop\teq0\teq1\teq2\trho_alld_to_resident\trho_resident_to_alld\trho_allc_to_resident\trho_resident_to_allc\n";
@@ -495,9 +537,7 @@ int main(int argc, char** argv) {
         rows[static_cast<size_t>(packed.idx)] = packed;
       }
 
-      std::filesystem::path out = opt.out_path.has_value()
-                                    ? std::filesystem::path(opt.out_path.value())
-                                    : std::filesystem::path("R1R2_sweep.tsv");
+      std::string out = opt.out_path.has_value() ? opt.out_path.value() : std::string("R1R2_sweep.tsv");
       WriteCombinedTable(out, rows);
     }
 
