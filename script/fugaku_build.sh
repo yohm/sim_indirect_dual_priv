@@ -6,7 +6,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CXX="${CXX:-mpiFCCpx}"
 JSON_INCLUDE="${JSON_INCLUDE:-${HOME}/data/sandbox/json/include}"
 EIGEN_INCLUDE="${EIGEN_INCLUDE:-${HOME}/data/sandbox/eigen-3.3.7}"
-OUT="${OUT:-${REPO_ROOT}/cmake-build-release/main_ExhaustiveSearch}"
+OUT="${OUT}:-${REPO_ROOT}/cmake-build-release/main_ExhaustiveSearch}"
 
 cd "${REPO_ROOT}"
 
