@@ -201,6 +201,7 @@ Representative scripts:
 
 - `script/plot_rr_sweep.py`
 - `script/plot_rr_sweep_bcs.py`
+- `script/plot_all_norms.py`
 - `script/plot_image_matrix_mono.py`
 - `script/plot_triadic_competition.py`
 - `script/combine_rr_sweep_figures.py`
