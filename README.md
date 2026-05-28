@@ -74,7 +74,7 @@ You can also run a single test binary directly, for example:
 
 The inspection and simulation binaries accept the same norm string formats:
 
-- norm name, for example `AllC`, `L3`, `S12`, `ImageScoring`
+- norm name, for example `AllC`, `L3`, `S12`, `S12v`, `ImageScoring`
 - decimal ID or hex ID, for example `857181`, `0xd145d`
 - deterministic triplet `Rd-Rr-P`, for example `128-132-2`
 - serialized values, for example `c1 c2 c3 c4 g1 ... g8 r1 ... r8`

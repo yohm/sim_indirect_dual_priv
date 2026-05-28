@@ -643,6 +643,11 @@ public:
                 AssessmentRule::KeepRecipient(),
                 {{P_BB, 0, 0, 1}});
   }
+  static Norm SecondarySixteenVariant(int i) {
+    Norm n = SecondarySixteen(i);
+    n.P = ActionRule::DISC();
+    return n;
+  }
   static Norm GenerousScoring(double benefit = 5.0) {
     double q = 1.0 / benefit;
     AssessmentRule gsco(std::array<double,8>{{q, 1.0, q, 1.0, q, 1.0, q, 1.0}});
@@ -892,6 +897,22 @@ const std::vector<std::pair<int,std::string> > Norm::NormNames = {{
                                                                     {SecondarySixteen(14).ID(), "S14"},
                                                                     {SecondarySixteen(15).ID(), "S15"},
                                                                     {SecondarySixteen(16).ID(), "S16"},
+                                                                    {SecondarySixteenVariant(1).ID(), "S1v"},
+                                                                    {SecondarySixteenVariant(2).ID(), "S2v"},
+                                                                    {SecondarySixteenVariant(3).ID(), "S3v"},
+                                                                    {SecondarySixteenVariant(4).ID(), "S4v"},
+                                                                    {SecondarySixteenVariant(5).ID(), "S5v"},
+                                                                    {SecondarySixteenVariant(6).ID(), "S6v"},
+                                                                    {SecondarySixteenVariant(7).ID(), "S7v"},
+                                                                    {SecondarySixteenVariant(8).ID(), "S8v"},
+                                                                    {SecondarySixteenVariant(9).ID(), "S9v"},
+                                                                    {SecondarySixteenVariant(10).ID(), "S10v"},
+                                                                    {SecondarySixteenVariant(11).ID(), "S11v"},
+                                                                    {SecondarySixteenVariant(12).ID(), "S12v"},
+                                                                    {SecondarySixteenVariant(13).ID(), "S13v"},
+                                                                    {SecondarySixteenVariant(14).ID(), "S14v"},
+                                                                    {SecondarySixteenVariant(15).ID(), "S15v"},
+                                                                    {SecondarySixteenVariant(16).ID(), "S16v"},
                                                                 }};
 bool operator==(const Norm& n1, const Norm& n2) {
   return n1.P == n2.P && n1.Rd == n2.Rd && n1.Rr == n2.Rr;

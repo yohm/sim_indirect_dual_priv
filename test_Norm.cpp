@@ -272,6 +272,29 @@ TEST(Norm, SecondarySixteen) {
   }
 }
 
+TEST(Norm, SecondarySixteenVariants) {
+  for (int i = 1; i <= 16; i++) {
+    const Norm base = Norm::SecondarySixteen(i);
+    const Norm variant = Norm::SecondarySixteenVariant(i);
+    const std::string name = "S" + std::to_string(i) + "v";
+
+    EXPECT_TRUE(variant.IsDeterministic());
+    EXPECT_TRUE(variant.IsRecipKeep());
+    EXPECT_EQ(variant.Rd, base.Rd);
+    EXPECT_EQ(variant.Rr, base.Rr);
+    EXPECT_EQ(variant.P, ActionRule::DISC());
+    EXPECT_EQ(variant.GetName(), name);
+    EXPECT_EQ(Norm::ParseNormString(name), variant);
+    EXPECT_EQ(Norm::ParseNormString(name).GetName(), name);
+    EXPECT_EQ(Norm::ConstructFromID(variant.ID()), variant);
+
+    EXPECT_DOUBLE_EQ(variant.CProb(B, B), 0.0);
+    EXPECT_DOUBLE_EQ(variant.CProb(B, G), 1.0);
+    EXPECT_DOUBLE_EQ(variant.CProb(G, B), 0.0);
+    EXPECT_DOUBLE_EQ(variant.CProb(G, G), 1.0);
+  }
+}
+
 TEST(Norm, rescaling) {
   Norm n = Norm::L6();
   auto rescaled = n.RescaleWithError(0.1, 0.02, 0.0);
@@ -364,6 +387,7 @@ TEST(Norm, ParseNormString) {
   EXPECT_EQ( Norm::ParseNormString("AllG").GetName(), "AllG" );
   EXPECT_EQ( Norm::ParseNormString("L1").GetName(), "L1" );
   EXPECT_EQ( Norm::ParseNormString("S16").GetName(), "S16" );
+  EXPECT_EQ( Norm::ParseNormString("S16v").GetName(), "S16v" );
   // L*-IS variants (Rr = ImageScoring)
   EXPECT_EQ( Norm::ParseNormString("L3-IS").GetName(), "L3-IS" );
   {
