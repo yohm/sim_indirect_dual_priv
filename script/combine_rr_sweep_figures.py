@@ -148,6 +148,28 @@ print(f"[INFO] Saving to {output_path_secondary}...")
 fig_secondary.savefig(output_path_secondary, dpi=150, bbox_inches='tight',
                       metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
 print(f"[INFO] Saved: {output_path_secondary}")
+
+#%% Secondary sixteen variants combined figure
+print(f"\n[INFO] Creating combined figure for secondary sixteen variant norms...")
+
+secondary_variant_norms = [f"S{i}v" for i in range(1, 17)]
+output_path_secondary_variants = figure_path("combined_rr_sweep_secondary_sixteen_variants.pdf")
+
+secondary_variant_images = load_pdf_images(secondary_variant_norms, "rr_sweep")
+fig_secondary_variants, axes_secondary_variants = render_grid(
+    secondary_variant_norms,
+    secondary_variant_images,
+    nrows_secondary,
+    ncols_secondary,
+    (20, 20),
+    "combined_rr_sweep_secondary_sixteen_variants.pdf",
+)
+plt.tight_layout(pad=0.5)
+
+print(f"[INFO] Saving to {output_path_secondary_variants}...")
+fig_secondary_variants.savefig(output_path_secondary_variants, dpi=150, bbox_inches='tight',
+                               metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
+print(f"[INFO] Saved: {output_path_secondary_variants}")
 plt.show()
 
 # %%

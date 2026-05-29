@@ -186,6 +186,50 @@ print(f"[INFO] Saving to {output_path_secondary}...")
 fig_secondary.savefig(output_path_secondary, dpi=150, bbox_inches='tight',
                       metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
 print(f"[INFO] Saved: {output_path_secondary}")
+
+#%% Secondary sixteen variants combined figure
+print(f"\n[INFO] Creating combined figure for secondary sixteen variant norms...")
+
+secondary_variant_norms = [f"S{i}v" for i in range(1, 17)]
+output_path_secondary_variants = figure_path("combined_rr_sweep_bcs_secondary_sixteen_variants.pdf")
+
+print(f"[INFO] Loading {len(secondary_variant_norms)} rr_sweep_bcs figures...")
+secondary_variant_images = []
+for norm in secondary_variant_norms:
+    pdf_path = figures_dir / f"rr_sweep_bcs_{norm}.pdf"
+    if not pdf_path.exists():
+        print(f"[WARNING] File not found: {pdf_path}")
+        secondary_variant_images.append(None)
+        continue
+
+    print(f"[INFO] Converting {pdf_path.name} to image (dpi={dpi})...")
+    img = convert_from_path(pdf_path, dpi=dpi)[0]
+    secondary_variant_images.append(img)
+
+print(f"[INFO] Creating {nrows_secondary}x{ncols_secondary} combined figure...")
+fig_secondary_variants, axes_secondary_variants = plt.subplots(
+    nrows_secondary, ncols_secondary, figsize=(20, 20)
+)
+
+for i, (norm, img) in enumerate(zip(secondary_variant_norms, secondary_variant_images)):
+    row = i // ncols_secondary
+    col = i % ncols_secondary
+    ax = axes_secondary_variants[row, col]
+
+    if img is not None:
+        ax.imshow(img)
+    else:
+        ax.text(0.5, 0.5, f"Missing:\n{norm}",
+                ha='center', va='center', fontsize=16)
+
+    ax.axis('off')
+
+plt.tight_layout(pad=0.5)
+
+print(f"[INFO] Saving to {output_path_secondary_variants}...")
+fig_secondary_variants.savefig(output_path_secondary_variants, dpi=150, bbox_inches='tight',
+                               metadata={'Creator': '', 'Producer': '', 'CreationDate': None})
+print(f"[INFO] Saved: {output_path_secondary_variants}")
 plt.show()
 
 # %%

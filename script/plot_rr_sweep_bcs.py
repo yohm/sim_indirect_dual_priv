@@ -234,3 +234,25 @@ for i in range(2, 17):
 
 
 # %%
+# Secondary sixteen variants example
+run_one(
+  "S1v",
+  show_legend=True,
+  show=show_figure,
+  extra_highlights=[],
+)
+
+
+#%%
+# Run S2v-S16v (S1v is already plotted above)
+for i in range(2, 17):
+  target_norm = f"S{i}v"
+  run_one(
+    target_norm,
+    show_legend=False,
+    show=False,
+    extra_highlights=[],
+  )
+
+
+# %%
