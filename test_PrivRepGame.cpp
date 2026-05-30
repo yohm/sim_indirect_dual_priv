@@ -2,6 +2,7 @@
 #include <fstream>
 #include <regex>
 #include <icecream.hpp>
+#include "InvasionAnalysis.hpp"
 #include "PrivRepGame.hpp"
 
 #include <gtest/gtest.h>
@@ -78,3 +79,20 @@ TEST(PrivateRepGame, RandomNonIdenticalPermutations) {
   }
 }
 
+TEST(InvasionAnalysis, ThresholdsAndCommonRange) {
+  auto lower_bound = ComputeInvasionThresholds({{0.8, 0.2}, {0.5, 0.0}});
+  ASSERT_TRUE(lower_bound.bc_min.has_value());
+  EXPECT_NEAR(lower_bound.bc_min.value(), 1.0, 1.0e-12);
+  EXPECT_FALSE(lower_bound.bc_max.has_value());
+
+  auto upper_bound = ComputeInvasionThresholds({{0.5, 0.8}, {0.9, 0.0}});
+  ASSERT_TRUE(upper_bound.bc_min.has_value());
+  ASSERT_TRUE(upper_bound.bc_max.has_value());
+  EXPECT_NEAR(upper_bound.bc_min.value(), 1.0, 1.0e-12);
+  EXPECT_NEAR(upper_bound.bc_max.value(), 4.0 / 3.0, 1.0e-12);
+
+  auto common = CombineInvasionThresholds({lower_bound});
+  EXPECT_TRUE(common.stable);
+  EXPECT_NEAR(common.bc_min, 1.0, 1.0e-12);
+  EXPECT_FALSE(common.bc_max.has_value());
+}

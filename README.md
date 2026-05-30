@@ -108,6 +108,7 @@ Runs the private assessment simulation for one or more resident populations. Pro
 ```bash
 ./cmake-build-release/inspect_PrivRepGame L3 50
 ./cmake-build-release/inspect_PrivRepGame L1 30 L2 30
+./cmake-build-release/inspect_PrivRepGame --local-action-mutants L6-IS 50
 ./cmake-build-release/inspect_PrivRepGame -j '{"t_init":10000,"t_measure":10000}' L1 30 L2 30
 ```
 
@@ -115,6 +116,7 @@ Options:
 
 - `-j <json|path>`: override simulation parameters
 - `-g`: also compute average reputations and write `image.txt`
+- `--local-action-mutants <resident> <N>`: evaluate one-mutant `b/c` stability against all action-rule variants of the resident
 
 Default parameters:
 

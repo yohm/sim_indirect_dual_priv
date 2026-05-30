@@ -22,6 +22,7 @@
 #include "CliHelpUtils.hpp"
 #include "CliJsonUtils.hpp"
 #include "EvolPrivRepGame.hpp"
+#include "InvasionAnalysis.hpp"
 #include "Norm.hpp"
 #include "PrivRepGame.hpp"
 
@@ -239,50 +240,6 @@ std::vector<std::vector<double>> RunPrivRepSimulation(const PrivateRepGame::popu
   game.ResetCounts();
   game.Update(params.t_measure, params.q, params.mu_impl, params.mu_percept, params.mu_assess1, params.mu_assess2, count_good);
   return game.NormCooperationLevels();
-}
-
-struct InvasionThresholds {
-  std::optional<double> bc_min;
-  std::optional<double> bc_max;
-};
-
-InvasionThresholds ComputeInvasionThresholds(const std::vector<std::vector<double>>& c_levels) {
-  InvasionThresholds thr;
-  if (c_levels.size() != 2 || c_levels[0].size() != 2 || c_levels[1].size() != 2) {
-    throw std::runtime_error("ComputeInvasionThresholds expects a 2x2 matrix");
-  }
-
-  double p_rr = c_levels[0][0];
-  double p_rm = c_levels[0][1];
-  double p_mr = c_levels[1][0];
-
-  if (p_rr > p_rm) {
-    double bc_min = (p_rr - p_mr) / (p_rr - p_rm);
-    thr.bc_min = bc_min > 1.0 ? bc_min : 1.0;
-    thr.bc_max.reset();
-  }
-  else if (p_rr < p_rm) {
-    double bc_max = (p_rr - p_mr) / (p_rr - p_rm);
-    if (bc_max > 1.0) {
-      thr.bc_min = 1.0;
-      thr.bc_max = bc_max;
-    }
-    else {
-      thr.bc_min.reset();
-      thr.bc_max = 1.0;
-    }
-  }
-  else {
-    if (p_rr > p_mr) {
-      thr.bc_min = 1.0;
-      thr.bc_max.reset();
-    }
-    else {
-      thr.bc_min.reset();
-      thr.bc_max = 1.0;
-    }
-  }
-  return thr;
 }
 
 SweepRow ComputeSweepRow(int rd,

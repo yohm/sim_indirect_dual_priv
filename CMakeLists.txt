@@ -48,7 +48,7 @@ target_link_libraries(test_PublicRepGame GTest::gtest_main)
 add_test(NAME test_PublicRepGame COMMAND test_PublicRepGame)
 
 add_executable(test_PrivRepGame test_PrivRepGame.cpp PrivRepGame.hpp Norm.hpp)
-target_link_libraries(test_PrivRepGame GTest::gtest_main)
+target_link_libraries(test_PrivRepGame nlohmann_json::nlohmann_json GTest::gtest_main)
 add_test(NAME test_PrivRepGame COMMAND test_PrivRepGame)
 
 add_executable(test_EvolPrivRepGame test_EvolPrivRepGame.cpp EvolPrivRepGame.hpp PrivRepGame.hpp Norm.hpp)
