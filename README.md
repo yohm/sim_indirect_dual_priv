@@ -137,12 +137,16 @@ Computes evolutionary outcomes under private assessment.
 
 ```bash
 ./cmake-build-release/inspect_EvolPrivRepGame L3
+./cmake-build-release/inspect_EvolPrivRepGame --action-mutants L3
 ./cmake-build-release/inspect_EvolPrivRepGame L1 L2
+./cmake-build-release/inspect_EvolPrivRepGame 153-170-10 153-170-5 AllC AllD
 ./cmake-build-release/inspect_EvolPrivRepGame -j '{"N":50,"benefit":5.0,"beta":1.0}' L3
 ```
 
 - one norm: returns selection-mutation equilibrium against `AllC` and `AllD`
+- `--action-mutants` with one norm: returns the equilibrium among the resident and all deterministic action-rule mutants with the resident assessment rules fixed
 - two norms: returns transition probabilities, equilibrium population, and monomorphic cooperation levels
+- three or more norms: returns the low-mutation equilibrium for exactly the listed strategy set
 
 When two norms are given, the program also writes `payoffs.dat`.
 

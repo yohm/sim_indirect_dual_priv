@@ -2,6 +2,8 @@
 #include <fstream>
 #include <chrono>
 #include <regex>
+#include <algorithm>
+#include <numeric>
 #include <icecream.hpp>
 #include <nlohmann/json.hpp>
 #include "EvolPrivRepGame.hpp"
@@ -122,4 +124,40 @@ TEST(EvolPrivRepGameAllCAllD, L1) {
   EXPECT_NEAR(eq[0], 0.30, 0.02);
   EXPECT_NEAR(eq[1], 0.04, 0.02);
   EXPECT_NEAR(eq[2], 0.66, 0.02);
+}
+
+TEST(EvolPrivRepGame, ActionRuleVariants) {
+  EvolPrivRepGame::Parameters params{12, 100, 100, 0.9, 0.0, 0.05, 0.0, 0.0, 1234};
+
+  Norm resident = Norm::L1();
+  auto variants = EvolPrivRepGame::ActionRuleVariants(resident, true);
+
+  ASSERT_EQ(variants.size(), 16);
+  EXPECT_EQ(variants.front().P, resident.P);
+  for (size_t i = 1; i < variants.size(); i++) {
+    EXPECT_EQ(variants[i].Rd, resident.Rd);
+    EXPECT_EQ(variants[i].Rr, resident.Rr);
+    EXPECT_NE(variants[i].P, resident.P);
+  }
+
+  std::vector<int> action_rule_ids;
+  action_rule_ids.reserve(variants.size());
+  for (const auto& variant : variants) {
+    action_rule_ids.push_back(variant.P.ID());
+  }
+
+  auto fixation_probs = EvolPrivRepGame::FixationProbabilities(variants, params, 5.0, 1.0);
+  auto equilibrium_population = EvolPrivRepGame::EquilibriumPopulationLowMut(fixation_probs);
+  ASSERT_EQ(fixation_probs.size(), 16);
+  ASSERT_EQ(equilibrium_population.size(), 16);
+
+  EXPECT_EQ(action_rule_ids.front(), resident.P.ID());
+  EXPECT_NE(std::find(action_rule_ids.begin(), action_rule_ids.end(), 5), action_rule_ids.end());
+
+  for (const auto& row : fixation_probs) {
+    ASSERT_EQ(row.size(), 16);
+  }
+
+  double eq_sum = std::accumulate(equilibrium_population.begin(), equilibrium_population.end(), 0.0);
+  EXPECT_NEAR(eq_sum, 1.0, 1.0e-8);
 }
