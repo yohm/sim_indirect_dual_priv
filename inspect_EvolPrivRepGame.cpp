@@ -97,7 +97,7 @@ void PrintNormSetEquilibrium(const std::vector<std::string>& norm_labels,
 
 void PrintActionRuleMutantEquilibrium(const Norm& norm, const EvolPrivRepGame::Parameters& params, double benefit, double beta) {
   std::vector<std::string> labels;
-  auto variants = EvolPrivRepGame::ActionRuleVariants(norm, true);
+  auto variants = norm.ActionRuleVariants(true);
   labels.reserve(variants.size());
   for (const auto& variant : variants) {
     labels.push_back(std::to_string(variant.Rd.ID()) + "-" +

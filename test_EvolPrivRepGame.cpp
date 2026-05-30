@@ -130,7 +130,7 @@ TEST(EvolPrivRepGame, ActionRuleVariants) {
   EvolPrivRepGame::Parameters params{12, 100, 100, 0.9, 0.0, 0.05, 0.0, 0.0, 1234};
 
   Norm resident = Norm::L1();
-  auto variants = EvolPrivRepGame::ActionRuleVariants(resident, true);
+  auto variants = resident.ActionRuleVariants(true);
 
   ASSERT_EQ(variants.size(), 16);
   EXPECT_EQ(variants.front().P, resident.P);

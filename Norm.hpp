@@ -318,6 +318,23 @@ public:
   }
   AssessmentRule Rd, Rr;  // assessment rules to assess donor and recipient
   ActionRule P;  // action rule
+  std::vector<Norm> ActionRuleVariants(bool include_self = true) const {
+    std::vector<Norm> variants;
+    const int resident_p_id = P.ID();
+
+    if (include_self) {
+      variants.push_back(*this);
+    }
+
+    for (int p_id = 0; p_id < 16; p_id++) {
+      if (p_id == resident_p_id) {
+        continue;
+      }
+      variants.emplace_back(Rd, Rr, ActionRule::MakeDeterministicRule(p_id));
+    }
+
+    return variants;
+  }
   std::string Inspect() const {
     std::stringstream ss;
     if (IsDeterministic()) {

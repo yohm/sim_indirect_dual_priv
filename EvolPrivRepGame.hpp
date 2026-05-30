@@ -27,24 +27,6 @@ public:
 
   using norms_t = std::vector<Norm>;
 
-  static norms_t ActionRuleVariants(const Norm& resident, bool include_resident = true) {
-    norms_t variants;
-    const int resident_p_id = resident.P.ID();
-
-    if (include_resident) {
-      variants.push_back(resident);
-    }
-
-    for (int p_id = 0; p_id < 16; p_id++) {
-      if (p_id == resident_p_id) {
-        continue;
-      }
-      variants.emplace_back(resident.Rd, resident.Rr, ActionRule::MakeDeterministicRule(p_id));
-    }
-
-    return variants;
-  }
-
   // rho[i][j] = fixation probability of a j-mutant into i-resident community
   static std::vector<std::vector<double>> FixationProbabilities(const norms_t& norms, const Parameters& param, double benefit, double beta) {
     size_t n_norms = norms.size();
