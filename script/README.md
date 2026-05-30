@@ -82,6 +82,7 @@ python plot_rr_sweep_bcs.py
 python plot_all_norms.py
 python plot_image_matrix_mono.py
 python plot_pc_bcrange.py
+python plot_local_action_mutant_payoffs.py
 python plot_triadic_competition.py
 ```
 
@@ -94,6 +95,7 @@ Representative outputs:
 - `script/figures/image_matrix_mono_<norm>_mono.pdf`
 - `script/figures/pc_<norm>_vs_<norm>-IS.pdf`
 - `script/figures/bc_range_<norm>_vs_<norm>-IS.pdf`
+- `script/figures/local_action_mutant_payoffs_<norm>_bc<value>.pdf`
 - `script/figures/triad_<norm>.pdf`
 
 ### Notes by script
@@ -115,6 +117,9 @@ Representative outputs:
 - `plot_pc_bcrange.py`
   - calls `inspect_PrivRepGame`
   - compares a base norm and its `-IS` variant
+- `plot_local_action_mutant_payoffs.py`
+  - calls `inspect_PrivRepGame` for the resident monomorphic population and `--local-action-mutants`
+  - plots resident monomorphic payoff and one-player action-rule mutant payoffs at a fixed `b/c`
 - `plot_triadic_competition.py`
   - calls `inspect_EvolPrivRepGame`
   - writes triadic competition diagrams
