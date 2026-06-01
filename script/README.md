@@ -82,6 +82,7 @@ python plot_rr_sweep_bcs.py
 python plot_all_norms.py
 python plot_image_matrix_mono.py
 python plot_pc_bcrange.py
+python plot_q_bcrange.py
 python plot_local_action_mutant_payoffs.py
 python plot_triadic_competition.py
 ```
@@ -95,6 +96,7 @@ Representative outputs:
 - `script/figures/image_matrix_mono_<norm>_mono.pdf`
 - `script/figures/pc_<norm>_vs_<norm>-IS.pdf`
 - `script/figures/bc_range_<norm>_vs_<norm>-IS.pdf`
+- `script/figures/l6_l6_is_q_panels.pdf`
 - `script/figures/local_action_mutant_payoffs_<norm>_bc<value>.pdf`
 - `script/figures/triad_<norm>.pdf`
 
@@ -117,6 +119,11 @@ Representative outputs:
 - `plot_pc_bcrange.py`
   - calls `inspect_PrivRepGame`
   - compares a base norm and its `-IS` variant
+- `plot_q_bcrange.py`
+  - calls `inspect_PrivRepGame`
+  - is intended for VS Code Interactive execution with editable `PARAMS` cells
+  - creates a four-panel `L6` / `L6-IS` comparison with self-cooperation level on the left and stable `b/c` range on the right
+  - writes `script/figures/l6_l6_is_q_panels.pdf`
 - `plot_local_action_mutant_payoffs.py`
   - calls `inspect_PrivRepGame` for the resident monomorphic population and `--local-action-mutants`
   - plots resident monomorphic payoff and one-player action-rule mutant payoffs at a fixed `b/c`
