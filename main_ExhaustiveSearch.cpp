@@ -28,7 +28,7 @@
 
 constexpr int kRuleStart = 0;
 constexpr int kRuleEnd = 255;
-constexpr double kBehavioralMutantBenefit = 5.0;
+constexpr double kBehavioralMutantBenefit = 2.0;
 
 struct ProgramOptions {
   std::optional<std::string> params_arg;
@@ -111,7 +111,7 @@ void PrintUsage(const char* exe) {
   std::cout << "  _seed                (uint64_t) RNG seed\n";
   std::cout << "  benefit              (double) benefit parameter\n";
   std::cout << "  beta                 (double) selection strength\n";
-  std::cout << "\nBehavioral-mutant payoff advantage is always evaluated at b/c=5.\n";
+  std::cout << "\nBehavioral-mutant payoff advantage is always evaluated at b/c=2.\n";
 }
 
 std::string RequireValue(int argc, char** argv, int& i, const std::string& flag) {
@@ -413,7 +413,7 @@ void WriteCombinedTable(const std::string& path, const std::vector<PackedRow>& r
     throw std::runtime_error("failed to open output file: " + path);
   }
 
-  fout << "# rd\trr\tself_coop\tbc_min(AllD)\tbc_max(AllC)\teq_coop\teq0\teq1\teq2\trho_alld_to_resident\trho_resident_to_alld\trho_allc_to_resident\trho_resident_to_allc\tbest_behavioral_mutant_action\tbehavioral_max_advantage_bc5\tbehavioral_resident_payoff_bc5\tbehavioral_mutant_payoff_bc5\n";
+  fout << "# rd\trr\tself_coop\tbc_min(AllD)\tbc_max(AllC)\teq_coop\teq0\teq1\teq2\trho_alld_to_resident\trho_resident_to_alld\trho_allc_to_resident\trho_resident_to_allc\tbest_behavioral_mutant_action\tbehavioral_max_advantage_bc2\tbehavioral_resident_payoff_bc2\tbehavioral_mutant_payoff_bc2\n";
   for (const auto& row : rows) {
     fout << row.rd << '\t'
          << row.rr << '\t'

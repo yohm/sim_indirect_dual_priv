@@ -91,8 +91,7 @@ Representative outputs:
 
 - `script/figures/rr_sweep_<norm>.pdf`
 - `script/figures/rr_sweep_bcs_<norm>.pdf`
-- `script/figures/all_norms_rr_sweep.pdf`
-- `script/figures/all_norms_rr_sweep_bcs.pdf`
+- `script/figures/all_norms_self_coop_vs_eq0.pdf`
 - `script/figures/image_matrix_mono_<norm>_mono.pdf`
 - `script/figures/pc_<norm>_vs_<norm>-IS.pdf`
 - `script/figures/bc_range_<norm>_vs_<norm>-IS.pdf`
@@ -110,9 +109,8 @@ Representative outputs:
   - plots self-cooperation level vs lower `b/c` threshold
 - `plot_all_norms.py`
   - reads `script/output/all_norms.tsv`
-  - plots self-cooperation level vs equilibrium fraction for all `(R1, R2)` combinations
-  - plots self-cooperation level vs lower `b/c` threshold for all `(R1, R2)` combinations
-  - highlights points with `bc_min(AllD) <= 5` in color and grays out the rest
+  - plots self-cooperation level vs resident equilibrium fraction `eq0` for all `(R1, R2)` combinations
+  - grays out points with `behavioral_max_advantage_bc2 >= 0.05`
 - `plot_image_matrix_mono.py`
   - calls `inspect_PrivRepGame -g`
   - writes `image_matrix_mono_*.pdf`
