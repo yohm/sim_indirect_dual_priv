@@ -35,7 +35,7 @@ PARAMS = {
   "build_dir": None,
   "N": 50,
   "t_init": 5000,
-  "t_measure": 50000,
+  "t_measure": 45000,
   "mu_impl": 0.02,
   "mu_percept": 0.0,
   "mu_assess1": 0.02,
@@ -45,6 +45,8 @@ PARAMS = {
   "q_min": 0.05,
   "q_max": 1.0,
   "q_count": 20,
+  "bcrange_q_min_by_resident": {"L6-IS": 0.4},
+  "skip_bcrange_residents": ["L6"],
   "x_min": 0.0,
   "x_max": 1.02,
   "y_max": 4.0,
@@ -76,6 +78,14 @@ def q_grid(q_min: float, q_max: float, q_count: int) -> list[float]:
   return [q_min + i * step for i in range(q_count)]
 
 
+def filtered_q_grid(params: dict, resident: str) -> list[float]:
+  qs = q_grid(params["q_min"], params["q_max"], params["q_count"])
+  q_min = params.get("bcrange_q_min_by_resident", {}).get(resident)
+  if q_min is None:
+    return qs
+  return [q for q in qs if q >= q_min]
+
+
 def sim_params(params: dict, q: float) -> dict:
   return {
     "t_init": params["t_init"],
@@ -90,6 +100,8 @@ def sim_params(params: dict, q: float) -> dict:
 
 
 def display_norm_name(norm: str) -> str:
+  if norm == "L6":
+    return "L6-base"
   if norm.endswith("-IS"):
     return norm[:-3] + "-RIS"
   return norm
@@ -146,9 +158,14 @@ def compute_panel_data(params: dict) -> dict:
   data = {}
 
   for resident in params["residents"]:
+    bcrange_qs = filtered_q_grid(params, resident)
+    if resident in params.get("skip_bcrange_residents", []):
+      bcrange_rows = []
+    else:
+      bcrange_rows = compute_bcrange(exe, resident, params, bcrange_qs)
     data[resident] = {
       "self_coop": compute_self_coop(exe, resident, params, qs),
-      "bcrange": compute_bcrange(exe, resident, params, qs),
+      "bcrange": bcrange_rows,
     }
 
   return data
@@ -171,6 +188,16 @@ def draw_self_coop(ax, rows: list[dict[str, Optional[float]]], params: dict, *, 
 
 
 def draw_bcrange(ax, rows: list[dict[str, Optional[float]]], params: dict, *, show_xlabel: bool):
+  if not rows:
+    ax.set_xlim(params["x_min"], params["x_max"])
+    ax.set_ylim(1.0, params["y_max"])
+    ax.set_xlabel("$q$" if show_xlabel else "", fontsize=22)
+    ax.set_ylabel("$b/c$", fontsize=22)
+    ax.tick_params(axis="both", labelsize=14)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    return
+
   qs = [float(row["q"]) for row in rows]
   lows = [finite_or_nan(row["bc_min"]) for row in rows]
   highs_for_fill = [params["y_max"] if row["bc_max"] is None else min(float(row["bc_max"]), params["y_max"]) for row in rows]
