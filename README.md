@@ -192,6 +192,7 @@ For local testing, restrict the rule ranges:
 ```
 
 Output is a TSV with one row per `(R1, R2, Discriminator)` norm. Columns include monomorphic cooperation, invasion thresholds against `AllD` and `AllC`, low-mutation equilibrium cooperation, equilibrium weights for resident/`AllC`/`AllD`, and the corresponding fixation probabilities.
+The table also reports the maximum local payoff advantage among behavioral mutants: all deterministic action-rule variants with the resident assessment rules fixed are tested as one-player mutants, using fixed `b/c = 5`.
 
 ## Python scripts
 

@@ -28,6 +28,7 @@
 
 constexpr int kRuleStart = 0;
 constexpr int kRuleEnd = 255;
+constexpr double kBehavioralMutantBenefit = 5.0;
 
 struct ProgramOptions {
   std::optional<std::string> params_arg;
@@ -59,6 +60,10 @@ struct SweepRow {
   double rho_resident_to_alld = std::numeric_limits<double>::quiet_NaN();
   double rho_allc_to_resident = std::numeric_limits<double>::quiet_NaN();
   double rho_resident_to_allc = std::numeric_limits<double>::quiet_NaN();
+  int best_behavioral_mutant_action = -1;
+  double behavioral_max_advantage = std::numeric_limits<double>::quiet_NaN();
+  double behavioral_resident_payoff = std::numeric_limits<double>::quiet_NaN();
+  double behavioral_mutant_payoff = std::numeric_limits<double>::quiet_NaN();
 };
 
 struct PackedRow {
@@ -78,6 +83,10 @@ struct PackedRow {
   double rho_resident_to_alld = std::numeric_limits<double>::quiet_NaN();
   double rho_allc_to_resident = std::numeric_limits<double>::quiet_NaN();
   double rho_resident_to_allc = std::numeric_limits<double>::quiet_NaN();
+  int best_behavioral_mutant_action = -1;
+  double behavioral_max_advantage = std::numeric_limits<double>::quiet_NaN();
+  double behavioral_resident_payoff = std::numeric_limits<double>::quiet_NaN();
+  double behavioral_mutant_payoff = std::numeric_limits<double>::quiet_NaN();
 };
 
 void PrintUsage(const char* exe) {
@@ -102,6 +111,7 @@ void PrintUsage(const char* exe) {
   std::cout << "  _seed                (uint64_t) RNG seed\n";
   std::cout << "  benefit              (double) benefit parameter\n";
   std::cout << "  beta                 (double) selection strength\n";
+  std::cout << "\nBehavioral-mutant payoff advantage is always evaluated at b/c=5.\n";
 }
 
 std::string RequireValue(int argc, char** argv, int& i, const std::string& flag) {
@@ -242,6 +252,35 @@ std::vector<std::vector<double>> RunPrivRepSimulation(const PrivateRepGame::popu
   return game.NormCooperationLevels();
 }
 
+struct BehavioralMutantPayoffSummary {
+  int best_action = -1;
+  double max_advantage = -std::numeric_limits<double>::infinity();
+  double resident_payoff = std::numeric_limits<double>::quiet_NaN();
+  double mutant_payoff = std::numeric_limits<double>::quiet_NaN();
+};
+
+BehavioralMutantPayoffSummary AnalyzeBehavioralMutants(const Norm& resident,
+                                                       const EvolPrivRepGame::Parameters& params) {
+  BehavioralMutantPayoffSummary result;
+  const auto mutants = resident.ActionRuleVariants(false);
+
+  for (const auto& mutant : mutants) {
+    auto bc_probs = EvolPrivRepGame::BenefitCostProbs(resident, params.N - 1, mutant, params);
+    double resident_payoff = kBehavioralMutantBenefit * bc_probs.first.benefit_prob - bc_probs.first.cost_prob;
+    double mutant_payoff = kBehavioralMutantBenefit * bc_probs.second.benefit_prob - bc_probs.second.cost_prob;
+    double advantage = mutant_payoff - resident_payoff;
+
+    if (advantage > result.max_advantage) {
+      result.max_advantage = advantage;
+      result.best_action = mutant.P.ID();
+      result.resident_payoff = resident_payoff;
+      result.mutant_payoff = mutant_payoff;
+    }
+  }
+
+  return result;
+}
+
 SweepRow ComputeSweepRow(int rd,
                          int rr,
                          const Norm& candidate,
@@ -285,6 +324,12 @@ SweepRow ComputeSweepRow(int rd,
     row.rho_alld_to_resident = rhos[2][0];
   }
 
+  auto behavioral = AnalyzeBehavioralMutants(candidate, params);
+  row.best_behavioral_mutant_action = behavioral.best_action;
+  row.behavioral_max_advantage = behavioral.max_advantage;
+  row.behavioral_resident_payoff = behavioral.resident_payoff;
+  row.behavioral_mutant_payoff = behavioral.mutant_payoff;
+
   return row;
 }
 
@@ -306,6 +351,10 @@ PackedRow PackRow(uint64_t idx, const SweepRow& row) {
   packed.rho_resident_to_alld = row.rho_resident_to_alld;
   packed.rho_allc_to_resident = row.rho_allc_to_resident;
   packed.rho_resident_to_allc = row.rho_resident_to_allc;
+  packed.best_behavioral_mutant_action = row.best_behavioral_mutant_action;
+  packed.behavioral_max_advantage = row.behavioral_max_advantage;
+  packed.behavioral_resident_payoff = row.behavioral_resident_payoff;
+  packed.behavioral_mutant_payoff = row.behavioral_mutant_payoff;
   return packed;
 }
 
@@ -364,7 +413,7 @@ void WriteCombinedTable(const std::string& path, const std::vector<PackedRow>& r
     throw std::runtime_error("failed to open output file: " + path);
   }
 
-  fout << "# rd\trr\tself_coop\tbc_min(AllD)\tbc_max(AllC)\teq_coop\teq0\teq1\teq2\trho_alld_to_resident\trho_resident_to_alld\trho_allc_to_resident\trho_resident_to_allc\n";
+  fout << "# rd\trr\tself_coop\tbc_min(AllD)\tbc_max(AllC)\teq_coop\teq0\teq1\teq2\trho_alld_to_resident\trho_resident_to_alld\trho_allc_to_resident\trho_resident_to_allc\tbest_behavioral_mutant_action\tbehavioral_max_advantage_bc5\tbehavioral_resident_payoff_bc5\tbehavioral_mutant_payoff_bc5\n";
   for (const auto& row : rows) {
     fout << row.rd << '\t'
          << row.rr << '\t'
@@ -378,7 +427,11 @@ void WriteCombinedTable(const std::string& path, const std::vector<PackedRow>& r
          << FormatDouble(row.rho_alld_to_resident) << '\t'
          << FormatDouble(row.rho_resident_to_alld) << '\t'
          << FormatDouble(row.rho_allc_to_resident) << '\t'
-         << FormatDouble(row.rho_resident_to_allc) << '\n';
+         << FormatDouble(row.rho_resident_to_allc) << '\t'
+         << row.best_behavioral_mutant_action << '\t'
+         << FormatDouble(row.behavioral_max_advantage) << '\t'
+         << FormatDouble(row.behavioral_resident_payoff) << '\t'
+         << FormatDouble(row.behavioral_mutant_payoff) << '\n';
   }
   std::cout << "Wrote: " << path << "\n";
 }
