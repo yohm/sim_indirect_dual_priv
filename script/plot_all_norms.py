@@ -20,7 +20,7 @@ from utils import figure_path, output_path
 
 INPUT_FILE = output_path("all_norms.tsv")
 OUTPUT_FILE = figure_path("all_norms_self_coop_vs_eq0.pdf")
-BEHAVIORAL_ADVANTAGE_THRESHOLD = 0.05
+BEHAVIORAL_ADVANTAGE_THRESHOLD = 0.02
 
 
 @dataclass(frozen=True)
