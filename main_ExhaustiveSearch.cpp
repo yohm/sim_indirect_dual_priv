@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cerrno>
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
@@ -29,6 +30,9 @@
 constexpr int kRuleStart = 0;
 constexpr int kRuleEnd = 255;
 constexpr double kBehavioralMutantBenefit = 2.0;
+constexpr double kHitPcMin = 0.8;
+constexpr double kHitEq0Min = 0.95;
+constexpr double kHitBehavioralAdvMax = 0.02;
 
 struct ProgramOptions {
   std::optional<std::string> params_arg;
@@ -37,6 +41,8 @@ struct ProgramOptions {
   int rd_end = kRuleEnd;
   int rr_start = kRuleStart;
   int rr_end = kRuleEnd;
+  bool sweep_actions = false;
+  bool hits_only = false;
 };
 
 struct SimulationConfig {
@@ -49,6 +55,7 @@ struct SimulationConfig {
 struct SweepRow {
   int rd = 0;
   int rr = 0;
+  int action = 10;
   double self_coop = std::numeric_limits<double>::quiet_NaN();
   std::optional<double> bc_min;
   std::optional<double> bc_max;
@@ -70,6 +77,7 @@ struct PackedRow {
   uint64_t idx = 0;
   int rd = 0;
   int rr = 0;
+  int action = 10;
   double self_coop = std::numeric_limits<double>::quiet_NaN();
   int has_bc_min = 0;
   double bc_min = std::numeric_limits<double>::quiet_NaN();
@@ -98,6 +106,8 @@ void PrintUsage(const char* exe) {
   CliHelpUtils::PrintOption(std::cout, "--rd-end <ID>", "Last R1 rule ID to evaluate, inclusive (default: 255)");
   CliHelpUtils::PrintOption(std::cout, "--rr-start <ID>", "First R2 rule ID to evaluate (default: 0)");
   CliHelpUtils::PrintOption(std::cout, "--rr-end <ID>", "Last R2 rule ID to evaluate, inclusive (default: 255)");
+  CliHelpUtils::PrintOption(std::cout, "--sweep-actions", "Sweep non-trivial deterministic action rules with G/B canonicalization");
+  CliHelpUtils::PrintOption(std::cout, "--hits-only", "Write only rows satisfying the hit thresholds");
   CliHelpUtils::PrintOption(std::cout, "--help", "Show this message");
   std::cout << "\nJSON parameters:\n";
   std::cout << "  N                    (size_t) EvolPrivRepGame population size\n";
@@ -112,6 +122,7 @@ void PrintUsage(const char* exe) {
   std::cout << "  benefit              (double) benefit parameter\n";
   std::cout << "  beta                 (double) selection strength\n";
   std::cout << "\nBehavioral-mutant payoff advantage is always evaluated at b/c=2.\n";
+  std::cout << "Hit-only thresholds: self_coop > 0.8, eq0 > 0.95, behavioral advantage < 0.02.\n";
 }
 
 std::string RequireValue(int argc, char** argv, int& i, const std::string& flag) {
@@ -179,6 +190,12 @@ ProgramOptions ParseArgs(int argc, char** argv) {
     else if (arg == "--rr-end") {
       opt.rr_end = ParseRuleID(RequireValue(argc, argv, i, arg), arg);
     }
+    else if (arg == "--sweep-actions") {
+      opt.sweep_actions = true;
+    }
+    else if (arg == "--hits-only") {
+      opt.hits_only = true;
+    }
     else {
       throw std::runtime_error("unknown option: " + arg);
     }
@@ -227,10 +244,38 @@ SimulationConfig BuildSimulationConfig(const ProgramOptions& opt) {
   return cfg;
 }
 
-Norm BuildNorm(int rd_id, int rr_id) {
+Norm BuildNorm(int rd_id, int rr_id, int action_id) {
   auto rd = AssessmentRule::MakeDeterministicRule(rd_id);
   auto rr = AssessmentRule::MakeDeterministicRule(rr_id);
-  return Norm(rd, rr, ActionRule::DISC());
+  auto action = ActionRule::MakeDeterministicRule(action_id);
+  return Norm(rd, rr, action);
+}
+
+std::vector<int> ActionIDsToEvaluate(bool sweep_actions) {
+  if (!sweep_actions) {
+    return {ActionRule::DISC().ID()};
+  }
+
+  std::vector<int> action_ids;
+  for (int action_id = 1; action_id <= 14; ++action_id) {
+    action_ids.push_back(action_id);
+  }
+  return action_ids;
+}
+
+bool IsCanonicalUnderSwapGB(const Norm& norm) {
+  return norm.ID() <= norm.SwapGB().ID();
+}
+
+Norm DisplayRepresentative(const Norm& norm) {
+  Norm swapped = norm.SwapGB();
+  if (swapped.P.ID() > norm.P.ID()) {
+    return swapped;
+  }
+  if (swapped.P.ID() == norm.P.ID() && swapped.ID() < norm.ID()) {
+    return swapped;
+  }
+  return norm;
 }
 
 std::vector<std::vector<double>> RunPrivRepSimulation(const PrivateRepGame::population_t& pop,
@@ -281,17 +326,16 @@ BehavioralMutantPayoffSummary AnalyzeBehavioralMutants(const Norm& resident,
   return result;
 }
 
-SweepRow ComputeSweepRow(int rd,
-                         int rr,
-                         const Norm& candidate,
+SweepRow ComputeSweepRow(const Norm& candidate,
                          const EvolPrivRepGame::Parameters& params,
                          const Norm& allc,
                          const Norm& alld,
                          double benefit,
                          double beta) {
   SweepRow row;
-  row.rd = rd;
-  row.rr = rr;
+  row.rd = candidate.Rd.ID();
+  row.rr = candidate.Rr.ID();
+  row.action = candidate.P.ID();
 
   PrivateRepGame::population_t pop_alld = {{candidate, params.N - 1}, {alld, 1}};
   auto c_levels_alld = RunPrivRepSimulation(pop_alld, params, false, 1);
@@ -333,11 +377,18 @@ SweepRow ComputeSweepRow(int rd,
   return row;
 }
 
+bool IsHit(const SweepRow& row) {
+  return row.self_coop > kHitPcMin &&
+         row.eq0 > kHitEq0Min &&
+         row.behavioral_max_advantage < kHitBehavioralAdvMax;
+}
+
 PackedRow PackRow(uint64_t idx, const SweepRow& row) {
   PackedRow packed;
   packed.idx = idx;
   packed.rd = row.rd;
   packed.rr = row.rr;
+  packed.action = row.action;
   packed.self_coop = row.self_coop;
   packed.has_bc_min = row.bc_min.has_value() ? 1 : 0;
   packed.bc_min = row.bc_min.value_or(std::numeric_limits<double>::quiet_NaN());
@@ -406,18 +457,25 @@ std::string ParentPath(const std::string& path) {
   return path.substr(0, slash);
 }
 
-void WriteCombinedTable(const std::string& path, const std::vector<PackedRow>& rows) {
+void WriteCombinedTable(const std::string& path, const std::vector<PackedRow>& rows, bool include_action) {
   CreateDirectories(ParentPath(path));
   std::ofstream fout(path);
   if (!fout) {
     throw std::runtime_error("failed to open output file: " + path);
   }
 
-  fout << "# rd\trr\tself_coop\tbc_min(AllD)\tbc_max(AllC)\teq_coop\teq0\teq1\teq2\trho_alld_to_resident\trho_resident_to_alld\trho_allc_to_resident\trho_resident_to_allc\tbest_behavioral_mutant_action\tbehavioral_max_advantage_bc2\tbehavioral_resident_payoff_bc2\tbehavioral_mutant_payoff_bc2\n";
+  fout << "# rd\trr\t";
+  if (include_action) {
+    fout << "action\t";
+  }
+  fout << "self_coop\tbc_min(AllD)\tbc_max(AllC)\teq_coop\teq0\teq1\teq2\trho_alld_to_resident\trho_resident_to_alld\trho_allc_to_resident\trho_resident_to_allc\tbest_behavioral_mutant_action\tbehavioral_max_advantage_bc2\tbehavioral_resident_payoff_bc2\tbehavioral_mutant_payoff_bc2\n";
   for (const auto& row : rows) {
     fout << row.rd << '\t'
-         << row.rr << '\t'
-         << FormatDouble(row.self_coop) << '\t'
+         << row.rr << '\t';
+    if (include_action) {
+      fout << row.action << '\t';
+    }
+    fout << FormatDouble(row.self_coop) << '\t'
          << (row.has_bc_min ? FormatDouble(row.bc_min) : std::string("None")) << '\t'
          << (row.has_bc_max ? FormatDouble(row.bc_max) : std::string("None")) << '\t'
          << FormatDouble(row.eq_coop) << '\t'
@@ -462,15 +520,31 @@ int main(int argc, char** argv) {
     SimulationConfig cfg = BuildSimulationConfig(opt);
     const int rd_count = opt.rd_end - opt.rd_start + 1;
     const int rr_count = opt.rr_end - opt.rr_start + 1;
-    const int sweep_count = rd_count * rr_count;
+    const std::vector<int> action_ids = ActionIDsToEvaluate(opt.sweep_actions);
+    const int action_count = static_cast<int>(action_ids.size());
+    const int sweep_count = rd_count * rr_count * action_count;
     if (world_rank == 0) {
       nlohmann::json cfg_json = nlohmann::json(cfg.params);
       cfg_json["benefit"] = cfg.benefit;
       cfg_json["beta"] = cfg.beta;
       std::cerr << "SimulationConfig: " << cfg_json.dump(2) << '\n';
-      std::cerr << "Sweeping " << sweep_count << " norms with Discriminator action rule"
+      std::cerr << "Sweeping " << sweep_count << " candidate norms"
                 << " (R1=" << opt.rd_start << ".." << opt.rd_end
-                << ", R2=" << opt.rr_start << ".." << opt.rr_end << ")\n";
+                << ", R2=" << opt.rr_start << ".." << opt.rr_end
+                << ", actions=";
+      for (size_t i = 0; i < action_ids.size(); ++i) {
+        if (i > 0) { std::cerr << ','; }
+        std::cerr << action_ids[i];
+      }
+      std::cerr << ")\n";
+      if (opt.sweep_actions) {
+        std::cerr << " G/B canonicalization enabled; ALLC/ALLD actions excluded\n";
+      }
+      if (opt.hits_only) {
+        std::cerr << " Hit-only output: self_coop > " << kHitPcMin
+                  << ", eq0 > " << kHitEq0Min
+                  << ", behavioral advantage < " << kHitBehavioralAdvMax << '\n';
+      }
     }
 
     const Norm allc = Norm::AllC();
@@ -481,13 +555,26 @@ int main(int argc, char** argv) {
     local_rows.reserve(reserve);
 
     for (int idx = world_rank; idx < sweep_count; idx += world_size) {
-      int rd = opt.rd_start + idx / rr_count;
-      int rr = opt.rr_start + idx % rr_count;
-      Norm candidate = BuildNorm(rd, rr);
-      SweepRow row = ComputeSweepRow(rd, rr, candidate, cfg.params, allc, alld, cfg.benefit, cfg.beta);
+      int action_index = idx % action_count;
+      int rr_index = (idx / action_count) % rr_count;
+      int rd_index = idx / (rr_count * action_count);
+      int rd = opt.rd_start + rd_index;
+      int rr = opt.rr_start + rr_index;
+      int action = action_ids[static_cast<size_t>(action_index)];
+      Norm candidate = BuildNorm(rd, rr, action);
+
+      if (opt.sweep_actions && !IsCanonicalUnderSwapGB(candidate)) {
+        continue;
+      }
+
+      Norm display = opt.sweep_actions ? DisplayRepresentative(candidate) : candidate;
+      SweepRow row = ComputeSweepRow(display, cfg.params, allc, alld, cfg.benefit, cfg.beta);
+      if (opt.hits_only && !IsHit(row)) {
+        continue;
+      }
       local_rows.push_back(PackRow(static_cast<uint64_t>(idx), row));
 
-      if (world_rank == 0 && idx % rr_count == 0) {
+      if (world_rank == 0 && idx % (rr_count * action_count) == 0) {
         std::cerr << "Progress: processed index " << idx << " / " << sweep_count << '\n';
       }
     }
@@ -535,20 +622,17 @@ int main(int argc, char** argv) {
                 MPI_COMM_WORLD);
 
     if (world_rank == 0) {
-      if (gathered_rows.size() != static_cast<size_t>(sweep_count)) {
-        throw std::runtime_error("MPI gather produced inconsistent row count");
-      }
-
-      std::vector<PackedRow> rows(static_cast<size_t>(sweep_count));
       for (const auto& packed : gathered_rows) {
         if (packed.idx >= static_cast<uint64_t>(sweep_count)) {
           throw std::runtime_error("received row with invalid index");
         }
-        rows[static_cast<size_t>(packed.idx)] = packed;
       }
+      std::sort(gathered_rows.begin(), gathered_rows.end(), [](const PackedRow& a, const PackedRow& b) {
+        return a.idx < b.idx;
+      });
 
       std::string out = opt.out_path.has_value() ? opt.out_path.value() : std::string("R1R2_sweep.tsv");
-      WriteCombinedTable(out, rows);
+      WriteCombinedTable(out, gathered_rows, opt.sweep_actions);
     }
 
     MPI_Finalize();

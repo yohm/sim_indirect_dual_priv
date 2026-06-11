@@ -194,6 +194,26 @@ For local testing, restrict the rule ranges:
 Output is a TSV with one row per `(R1, R2, Discriminator)` norm. Columns include monomorphic cooperation, invasion thresholds against `AllD` and `AllC`, low-mutation equilibrium cooperation, equilibrium weights for resident/`AllC`/`AllD`, and the corresponding fixation probabilities.
 The table also reports the maximum local payoff advantage among behavioral mutants: all deterministic action-rule variants with the resident assessment rules fixed are tested as one-player mutants, using fixed `b/c = 2`.
 
+To sweep action rules as well, add `--sweep-actions`. This evaluates non-trivial deterministic action rules, excludes `AllC`/`AllD`, and skips norms whose good/bad-label swapped counterpart is the canonical representative.
+For readability, action-sweep output is written in the good/bad orientation with the larger action-rule ID, so Discriminator-like representatives appear with `Action = 10`.
+
+```bash
+mpirun -n 4 ./cmake-build-release/main_ExhaustiveSearch \
+  --params '{"N":50,"t_init":1000,"t_measure":1000}' \
+  --sweep-actions \
+  --out action_sweep.tsv
+```
+
+To write only candidate hits, add `--hits-only`. The hit thresholds are `self_coop > 0.8`, `eq0 > 0.95`, and `behavioral_max_advantage_bc2 < 0.02`.
+
+```bash
+mpirun -n 4 ./cmake-build-release/main_ExhaustiveSearch \
+  --params '{"N":50,"t_init":1000,"t_measure":1000}' \
+  --sweep-actions \
+  --hits-only \
+  --out action_sweep_hits.tsv
+```
+
 ## Python scripts
 
 Python utilities for plotting and figure assembly are in [`script/README.md`](/Users/murase/work/sim_indirect_dual_priv/script/README.md).
