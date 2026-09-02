@@ -1,7 +1,6 @@
 # Indirect reciprocity with dual private assessment
 
-Source code for the paper by Y. J. Tham, C. Hilbe, and Y. Murase, "Indirect reciprocity with dual private assessment."
-- TODO: add link to publication when available
+Source code for Tham, Y. J., Hilbe, C., & Murase, Y. (2026). Indirect reciprocity with dual private assessment. _Proceedings of the National Academy of Sciences, 123_(35), e2624656123. https://doi.org/10.1073/pnas.2624656123 
 
 ## Overview
 
